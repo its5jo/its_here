@@ -6,11 +6,13 @@ import com.spring.its_here.domain.user.dto.request.UserCreateRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserLoginRequestDto;
 import com.spring.its_here.domain.user.dto.response.TokenPairDto;
 import com.spring.its_here.domain.user.dto.response.UserResponseDto;
+import com.spring.its_here.domain.user.dto.response.UserSelfGetResponseDto;
 import com.spring.its_here.domain.user.entity.UserEntity;
 import com.spring.its_here.domain.user.enums.UserRole;
 import com.spring.its_here.domain.user.repository.UserRepository;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
+import com.spring.its_here.global.security.AuthenticationFacade;
 import com.spring.its_here.global.security.CustomUserDetails;
 import com.spring.its_here.global.security.JwtProvider;
 import org.junit.jupiter.api.DisplayName;
@@ -53,6 +55,9 @@ class UserServiceTest {
 
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
+
+    @Mock
+    private AuthenticationFacade authenticationFacade;
 
     @InjectMocks
     private UserService userService;
@@ -391,6 +396,69 @@ class UserServiceTest {
             verify(jwtProvider, never()).createAccessToken(any());
             verify(jwtProvider, never()).createRefreshToken(any());
             verify(jwtProvider, never()).getRefreshTokenExpiredAt();
+        }
+    }
+
+    @Nested
+    @DisplayName("내 정보 조회 API 테스트")
+    class GetSelfTest {
+        @Test
+        @DisplayName("내 정보 조회 성공")
+        void getSelf_success() {
+            // given
+            Long userId = 1L;
+
+            UserEntity user = UserEntity.create(
+                    "testUser",
+                    "encodedPassword",
+                    "테스터",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(user, "id", userId);
+
+            when(authenticationFacade.getCurrentUserId())
+                    .thenReturn(userId);
+
+            when(userRepository.findById(userId))
+                    .thenReturn(Optional.of(user));
+
+            // when
+            UserSelfGetResponseDto response = userService.getSelf();
+
+            // then
+            assertThat(response.username()).isEqualTo("testUser");
+            assertThat(response.nickname()).isEqualTo("테스터");
+            assertThat(response.role()).isEqualTo(UserRole.CUSTOMER);
+
+            verify(authenticationFacade).getCurrentUserId();
+            verify(userRepository).findById(userId);
+        }
+
+        @Test
+        @DisplayName("내 정보 조회 실패 - 사용자가 존재하지 않으면 예외가 발생")
+        void getSelf_fail_userNotFound() {
+            // given
+            Long userId = 1L;
+
+            when(authenticationFacade.getCurrentUserId())
+                    .thenReturn(userId);
+
+            when(userRepository.findById(userId))
+                    .thenReturn(Optional.empty());
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> userService.getSelf()
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.USER_NOT_FOUND);
+
+            verify(authenticationFacade).getCurrentUserId();
+            verify(userRepository).findById(userId);
         }
     }
 }
