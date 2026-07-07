@@ -4,6 +4,7 @@ import com.spring.its_here.domain.user.dto.request.UserCreateRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserLoginRequestDto;
 import com.spring.its_here.domain.user.dto.response.TokenPairDto;
 import com.spring.its_here.domain.user.dto.response.UserResponseDto;
+import com.spring.its_here.domain.user.dto.response.UserSelfGetResponseDto;
 import com.spring.its_here.domain.user.dto.response.UserTokenResponseDto;
 import com.spring.its_here.domain.user.service.UserService;
 import com.spring.its_here.global.ApiResponse;
@@ -15,10 +16,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RequestMapping("/api/users")
 @RestController
@@ -100,5 +98,16 @@ public class UserController {
                         )
                 )
         );
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<UserSelfGetResponseDto>> getCurrentUser() {
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        "내 정보 조회 성공",
+                        "SUCCESS",
+                        userService.getSelf()
+                ));
     }
 }

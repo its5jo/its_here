@@ -6,12 +6,13 @@ import com.spring.its_here.domain.user.dto.request.UserCreateRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserLoginRequestDto;
 import com.spring.its_here.domain.user.dto.response.TokenPairDto;
 import com.spring.its_here.domain.user.dto.response.UserResponseDto;
+import com.spring.its_here.domain.user.dto.response.UserSelfGetResponseDto;
 import com.spring.its_here.domain.user.entity.UserEntity;
 import com.spring.its_here.domain.user.repository.UserRepository;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
+import com.spring.its_here.global.security.AuthenticationFacade;
 import com.spring.its_here.global.security.CustomUserDetails;
-import com.spring.its_here.global.security.CustomUserDetailsService;
 import com.spring.its_here.global.security.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -30,7 +31,7 @@ public class UserService {
     private final AuthenticationManager authenticationManager;
     private final JwtProvider jwtProvider;
     private final RefreshTokenRepository refreshTokenRepository;
-    private final CustomUserDetailsService customUserDetailsService;
+    private final AuthenticationFacade authenticationFacade;
 
     @Transactional
     public UserResponseDto signup(UserCreateRequestDto userCreateRequestDto) {
@@ -114,7 +115,7 @@ public class UserService {
                 refreshTokenRepository
                         .findByRefreshToken(refreshToken)
                         .orElseThrow(() ->
-                                new ItsHereException(ErrorCode.AUTH_UNAUTHORIZED, null)
+                                new ItsHereException(ErrorCode.AUTH_UNAUTHORIZED)
                         );
 
         // userId 추출
@@ -124,7 +125,7 @@ public class UserService {
         UserEntity user =
                 userRepository.findById(userId)
                         .orElseThrow(() ->
-                                new ItsHereException(ErrorCode.AUTH_UNAUTHORIZED, null)
+                                new ItsHereException(ErrorCode.AUTH_UNAUTHORIZED)
                         );
 
         // 인증된 사용자 정보 가져옴
@@ -152,5 +153,24 @@ public class UserService {
         );
 
         return new TokenPairDto(newAccessToken, newRefreshToken);
+    }
+
+    @Transactional(readOnly = true)
+    public UserSelfGetResponseDto getSelf() {
+        // SecurityContext에 저장된 현재 로그인 사용자의 PK를 조회한다.
+        Long userId = authenticationFacade.getCurrentUserId();
+
+        // PK를 이용하여 최신 사용자 정보를 조회한다.
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new ItsHereException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        // 최신 사용자 정보를 응답 DTO로 변환하여 반환한다.
+        return new UserSelfGetResponseDto(
+                user.getUsername(),
+                user.getNickname(),
+                user.getRole()
+        );
     }
 }
