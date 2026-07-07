@@ -20,7 +20,7 @@ public record ErrorResponse(
     ) {
         return new ErrorResponse(
                 message,
-               "FAIL",
+                errorCode == null ? null : errorCode.name(),
                 details == null ? Map.of() : details,
                 LocalDateTime.now()
         );
