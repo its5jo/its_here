@@ -1,17 +1,14 @@
 package com.spring.its_here.global.advice;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Map;
 
 public record ErrorResponse(
         String message,
         String code,
         Map<String, Object> details,
-
-        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-        LocalDateTime timestamp
+        Instant timestamp
 ) {
     public static ErrorResponse from(
             ErrorCode errorCode,
@@ -22,7 +19,7 @@ public record ErrorResponse(
                 message,
                 errorCode == null ? null : errorCode.name(),
                 details == null ? Map.of() : details,
-                LocalDateTime.now()
+                Instant.now()
         );
     }
 
@@ -34,7 +31,7 @@ public record ErrorResponse(
                 message,
                 "FAIL",
                 Map.of("reason", reason),
-                LocalDateTime.now()
+                Instant.now()
         );
     }
 }
