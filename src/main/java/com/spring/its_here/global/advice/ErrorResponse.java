@@ -22,16 +22,4 @@ public record ErrorResponse(
                 Instant.now()
         );
     }
-
-    public static ErrorResponse fail(
-            String message,
-            String reason
-    ) {
-        return new ErrorResponse(
-                message,
-                "FAIL",
-                Map.of("reason", reason),
-                Instant.now()
-        );
-    }
 }
