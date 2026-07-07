@@ -1,12 +1,22 @@
 package com.spring.its_here.domain.user.service;
 
+import com.spring.its_here.domain.auth.entity.RefreshTokenEntity;
+import com.spring.its_here.domain.auth.repository.RefreshTokenRepository;
 import com.spring.its_here.domain.user.dto.request.UserCreateRequestDto;
+import com.spring.its_here.domain.user.dto.request.UserLoginRequestDto;
+import com.spring.its_here.domain.user.dto.response.TokenPairDto;
 import com.spring.its_here.domain.user.dto.response.UserResponseDto;
 import com.spring.its_here.domain.user.entity.UserEntity;
 import com.spring.its_here.domain.user.repository.UserRepository;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
+import com.spring.its_here.global.security.CustomUserDetails;
+import com.spring.its_here.global.security.CustomUserDetailsService;
+import com.spring.its_here.global.security.JwtProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +27,10 @@ public class UserService {
 
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
+    private final AuthenticationManager authenticationManager;
+    private final JwtProvider jwtProvider;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final CustomUserDetailsService customUserDetailsService;
 
     @Transactional
     public UserResponseDto signup(UserCreateRequestDto userCreateRequestDto) {
@@ -43,5 +57,100 @@ public class UserService {
         user.updateCreatedBy(user.getId());
 
         return new UserResponseDto(user.getId());
+    }
+
+    @Transactional
+    public TokenPairDto login(UserLoginRequestDto userLoginRequestDto) {
+        // 아이디와 비밀번호를 이용하여 인증 요청 객체 생성
+        UsernamePasswordAuthenticationToken authenticationToken =
+                new UsernamePasswordAuthenticationToken(
+                        userLoginRequestDto.username(),
+                        userLoginRequestDto.password()
+                );
+
+        // AuthenticationManager를 통해 인증 수행
+        Authentication authentication =
+                authenticationManager.authenticate(authenticationToken);
+
+        // 인증된 사용자 정보 가져옴
+        CustomUserDetails userDetails =
+                (CustomUserDetails) authentication.getPrincipal();
+
+        // Access Token 생성
+        String accessToken =
+                jwtProvider.createAccessToken(userDetails);
+
+        // Refresh Token 생성
+        String refreshToken =
+                jwtProvider.createRefreshToken(userDetails);
+
+        // 인증된 사용자의 PK 가져옴
+        Long userId = userDetails.getUserId();
+
+        // 기존 Refresh Token 삭제
+        refreshTokenRepository.deleteByUserId(userId);
+
+        // 새로운 Refresh Token 정보 생성
+        RefreshTokenEntity entity =
+                new RefreshTokenEntity(
+                        userId,
+                        refreshToken,
+                        jwtProvider.getRefreshTokenExpiredAt()
+                );
+
+        // Refresh Token 저장
+        refreshTokenRepository.save(entity);
+
+        return new TokenPairDto(accessToken, refreshToken);
+    }
+
+    @Transactional
+    public TokenPairDto reissue(String refreshToken) {
+        // JWT 검증
+        jwtProvider.validateToken(refreshToken);
+
+        // RefreshToken 조회
+        RefreshTokenEntity refreshTokenEntity =
+                refreshTokenRepository
+                        .findByRefreshToken(refreshToken)
+                        .orElseThrow(() ->
+                                new ItsHereException(ErrorCode.AUTH_UNAUTHORIZED, null)
+                        );
+
+        // userId 추출
+        Long userId = refreshTokenEntity.getUserId();
+
+        // 사용자 권한 조회
+        UserEntity user =
+                userRepository.findById(userId)
+                        .orElseThrow(() ->
+                                new ItsHereException(ErrorCode.AUTH_UNAUTHORIZED, null)
+                        );
+
+        // 인증된 사용자 정보 가져옴
+        CustomUserDetails userDetails =
+                new CustomUserDetails(user);
+
+        // 새로운 AccessToken 생성
+        String newAccessToken =
+                jwtProvider.createAccessToken(userDetails);
+
+        // 새로운 RefreshToken 생성
+        String newRefreshToken =
+                jwtProvider.createRefreshToken(userDetails);
+
+        // 기존 RefreshToken 삭제
+        refreshTokenRepository.deleteByUserId(userId);
+
+        // 새로운 RefreshToken 정보 저장
+        refreshTokenRepository.save(
+                new RefreshTokenEntity(
+                        userId,
+                        newRefreshToken,
+                        jwtProvider.getRefreshTokenExpiredAt()
+                )
+        );
+
+        return new TokenPairDto(newAccessToken, newRefreshToken);
     }
 }

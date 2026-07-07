@@ -6,7 +6,8 @@ import org.springframework.http.HttpStatus;
 
 @Getter
 public enum ErrorCode {
-    AUTH_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 올바르지 않습니다.", "U-001");
+    AUTH_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 올바르지 않습니다.", "U-001"),
+    DUPLICATE_USERNAME(HttpStatus.CONFLICT, "동일 아이디가 존재합니다.", "U-002");
 
     private final String message;
     private final HttpStatus status;

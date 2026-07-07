@@ -1,5 +1,6 @@
 package com.spring.its_here.global.config;
 
+import com.spring.its_here.global.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,12 +15,15 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -55,16 +59,21 @@ public class SecurityConfig {
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // 로그인, 회원가입, swagger, h2는 모두 접근 허용
+                        // 로그인, 회원가입, 재발급, swagger, h2는 모두 접근 허용
                         .requestMatchers(
                                 "/api/users/signup",
                                 "/api/users/login",
+                                "/api/users/reissue",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/h2-console/**"
                         ).permitAll()
                         // 그 외 모든 요청 권한 필요
                         .anyRequest().authenticated()
+                )
+                .addFilterBefore(
+                        jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class
                 );
 
         return http.build();
