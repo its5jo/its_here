@@ -6,7 +6,10 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -15,7 +18,8 @@ import java.util.UUID;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Review extends BaseEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
     @Column(name = "rating", nullable = false)
@@ -23,6 +27,23 @@ public class Review extends BaseEntity {
 
     @Column(name = "content")
     private String content;
+
+    @LastModifiedDate
+    @Column(name = "updated_at")
+    private Instant updateAt;
+
+    @LastModifiedBy
+    @Column(name = "updated_by")
+    private Long updatedBy;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
+    @Column(name = "deleted_by")
+    private Long deletedBy;
+
+    @Column(name = "has_deleted", nullable = false)
+    private boolean hasDeleted = false;
 
     // 임시
     private UUID orderId;
@@ -55,5 +76,11 @@ public class Review extends BaseEntity {
 //        review.storeId = storeId;
 //        review.userId = userId;
         return review;
+    }
+
+    public void delete(Long deletedBy) {
+        this.deletedAt = Instant.now();
+        this.deletedBy = deletedBy;
+        this.hasDeleted = true;
     }
 }
