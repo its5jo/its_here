@@ -52,7 +52,7 @@ class ReviewServiceTest {
             given(reviewRepository.save(any(Review.class))).willReturn(reviewSave);
             ReviewCreateRequestDto reviewCreate = new ReviewCreateRequestDto(
                     orderId,
-                    3,
+                    3.0,
                     "content"
             );
 

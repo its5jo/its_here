@@ -65,9 +65,9 @@ public class Review extends BaseEntity {
     public static Review create(
             double rating,
             String content
-//            UUID orderId,
-//            UUID storeId,
-//            UUID userId
+//            Order orderId,
+//            Store storeId,
+//            User userId
     ) {
         Review review = new Review();
         review.rating = rating;

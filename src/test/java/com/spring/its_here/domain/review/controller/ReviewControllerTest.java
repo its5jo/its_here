@@ -10,6 +10,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -60,7 +62,7 @@ class ReviewControllerTest {
         void create() throws Exception {
             ReviewCreateRequestDto reviewCreateRequestDto = new ReviewCreateRequestDto(
                     orderId,
-                    3,
+                    3.0,
                     "content"
             );
             ReviewCreateResponseDto reviewCreateResponseDto = new ReviewCreateResponseDto(
@@ -84,12 +86,20 @@ class ReviewControllerTest {
                     .andExpect(jsonPath("$.data.userId").value(userId.toString()));
         }
 
-        @Test
+        @ParameterizedTest
+        @ValueSource(doubles = {
+                Double.NaN,
+                0.5,
+                0.0,
+                -1.0,
+                5.1,
+                100.0
+        })
         @DisplayName("유효하지 않은 평점")
-        void invalid_rating() throws Exception {
+        void invalid_rating(double rating) throws Exception {
             ReviewCreateRequestDto reviewCreateRequestDto = new ReviewCreateRequestDto(
                     orderId,
-                    0.5,
+                    rating,
                     "content"
             );
 

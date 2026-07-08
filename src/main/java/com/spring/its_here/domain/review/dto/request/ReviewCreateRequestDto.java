@@ -4,7 +4,7 @@ import java.util.UUID;
 
 public record ReviewCreateRequestDto(
         UUID orderId,
-        double rating,
+        Double rating,
         String content
 ) {
 }

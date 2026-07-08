@@ -4,9 +4,7 @@ package com.spring.its_here.domain.review.validator;
 import com.spring.its_here.domain.review.dto.request.ReviewCreateRequestDto;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
-import org.springframework.stereotype.Component;
 
-@Component
 public class ReviewValidator {
     public static void validateCreate(ReviewCreateRequestDto reviewCreateRequestDto) {
         validateRating(reviewCreateRequestDto.rating());
