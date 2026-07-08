@@ -21,14 +21,19 @@ public class Area extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
+
     @Column(name = "city", nullable = false)
     private String city;
+
     @Column(name = "district", nullable = false)
     private String district;
+
     @Column(name = "town", nullable = false)
     private String town;
+
     @Column(name = "has_available", nullable = false)
     private boolean hasAvailable;
+
     @Column(name = "has_deleted", nullable = false)
     private boolean hasDeleted = false;
 //
