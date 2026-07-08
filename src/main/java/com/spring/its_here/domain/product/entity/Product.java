@@ -1,5 +1,6 @@
 package com.spring.its_here.domain.product.entity;
 
+import com.spring.its_here.global.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -11,23 +12,25 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "p_product")
-public class Product {
+public class Product extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(nullable = false, updatable = false)
+    @Column(name = "id", nullable = false, updatable = false)
     private UUID id;
 
-    @Column(nullable = false)
+    @Column(name = "name", nullable = false)
     private String name;
 
+    @Column(name = "description")
     private String description;
 
-    @Column(nullable = false)
+    @Column(name = "has_hidden", nullable = false)
     private boolean hasHidden;
 
-    @Column(nullable = false)
+    @Column(name = "price", nullable = false)
     private int price;
 
+    @Column(name = "image_url")
     private String imageUrl;
 
 //    @JoinColumn(name = "store_id", nullable = false)
