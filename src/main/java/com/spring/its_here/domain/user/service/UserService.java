@@ -36,8 +36,10 @@ public class UserService {
 
     @Transactional
     public UserResponseDto signup(UserCreateRequestDto userCreateRequestDto) {
-        // 동일한 닉네임 존재 확인
-        if (userRepository.existsByUsernameAndHasDeletedFalse(userCreateRequestDto.username())) {
+        // 동일한 아이디, 닉네임 존재 확인
+        if (userRepository.existsByUsernameAndHasDeletedFalse(userCreateRequestDto.username())
+            && userRepository.existsByNicknameAndHasDeletedFalse(userCreateRequestDto.nickname())
+        ) {
             throw new ItsHereException(ErrorCode.DUPLICATE_USERNAME);
         }
 
@@ -61,7 +63,7 @@ public class UserService {
         userRepository.save(user);
 
         // 생성자 저장
-        user.updateCreatedBy(user.getId());
+        user.assignCreatedBy(user.getId());
 
         return new UserResponseDto(user.getId());
     }

@@ -1,7 +1,7 @@
 package com.spring.its_here.domain.user.entity;
 
 import com.spring.its_here.domain.user.enums.UserRole;
-import com.spring.its_here.global.BaseEntity;
+import com.spring.its_here.global.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -18,15 +18,20 @@ public class UserEntity extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private String username;
 
+    @Column(nullable = false)
     private String password;
 
+    @Column(nullable = false)
     private String nickname;
 
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
+    @Column(nullable = false)
     private Boolean hasDeleted;
 
 
