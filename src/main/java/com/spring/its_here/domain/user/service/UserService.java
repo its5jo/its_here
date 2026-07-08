@@ -1,7 +1,5 @@
 package com.spring.its_here.domain.user.service;
 
-import com.spring.its_here.domain.auth.entity.RefreshTokenEntity;
-import com.spring.its_here.domain.auth.repository.RefreshTokenRepository;
 import com.spring.its_here.domain.user.dto.request.UserCreateRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserLoginRequestDto;
 import com.spring.its_here.domain.user.dto.response.TokenPairDto;
@@ -31,7 +29,6 @@ public class UserService {
     private final UserRepository userRepository;
     private final AuthenticationManager authenticationManager;
     private final JwtProvider jwtProvider;
-    private final RefreshTokenRepository refreshTokenRepository;
     private final AuthenticationFacade authenticationFacade;
 
     @Transactional
@@ -93,23 +90,6 @@ public class UserService {
         String refreshToken =
                 jwtProvider.createRefreshToken(userDetails);
 
-        // 인증된 사용자의 PK 가져옴
-        Long userId = userDetails.getUserId();
-
-        // 기존 Refresh Token 삭제
-        refreshTokenRepository.deleteByUserId(userId);
-
-        // 새로운 Refresh Token 정보 생성
-        RefreshTokenEntity entity =
-                new RefreshTokenEntity(
-                        userId,
-                        refreshToken,
-                        jwtProvider.getRefreshTokenExpiredAt()
-                );
-
-        // Refresh Token 저장
-        refreshTokenRepository.save(entity);
-
         return new TokenPairDto(accessToken, refreshToken);
     }
 
@@ -118,16 +98,7 @@ public class UserService {
         // JWT 검증
         jwtProvider.validateToken(refreshToken);
 
-        // RefreshToken 조회
-        RefreshTokenEntity refreshTokenEntity =
-                refreshTokenRepository
-                        .findByRefreshToken(refreshToken)
-                        .orElseThrow(() ->
-                                new ItsHereException(ErrorCode.AUTH_UNAUTHORIZED)
-                        );
-
-        // userId 추출
-        Long userId = refreshTokenEntity.getUserId();
+        Long userId = jwtProvider.getUserId(refreshToken);
 
         // 사용자 권한 조회
         UserEntity user =
@@ -147,18 +118,6 @@ public class UserService {
         // 새로운 RefreshToken 생성
         String newRefreshToken =
                 jwtProvider.createRefreshToken(userDetails);
-
-        // 기존 RefreshToken 삭제
-        refreshTokenRepository.deleteByUserId(userId);
-
-        // 새로운 RefreshToken 정보 저장
-        refreshTokenRepository.save(
-                new RefreshTokenEntity(
-                        userId,
-                        newRefreshToken,
-                        jwtProvider.getRefreshTokenExpiredAt()
-                )
-        );
 
         return new TokenPairDto(newAccessToken, newRefreshToken);
     }

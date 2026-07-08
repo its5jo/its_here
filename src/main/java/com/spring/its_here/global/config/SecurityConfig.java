@@ -59,13 +59,20 @@ public class SecurityConfig {
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // 로그인, 회원가입, 재발급, swagger, h2는 모두 접근 허용
                         .requestMatchers(
+                                // 각 기능의 권한 관련 테스트 진행시 해당 부분 주석 처리 후 진행
+                                 "/api/**",
+
+                                // 로그인, 회원가입, 재발급 접근 허용
                                 "/api/users/signup",
                                 "/api/users/login",
                                 "/api/users/reissue",
+
+                                // swagger 접근 허용
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
+
+                                // h2 접근 허용
                                 "/h2-console/**"
                         ).permitAll()
                         // 그 외 모든 요청 권한 필요

@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Date;
 
 @Component
@@ -27,10 +27,10 @@ public class JwtProvider {
 
     // Access Token 생성
     public String createAccessToken(CustomUserDetails userDetails) {
-        Date now = new Date();
+        Instant now = Instant.now();
 
-        Date expiration =
-                new Date(now.getTime() + jwtProperties.getAccessTokenExpiration());
+        Instant expiration =
+                now.plusMillis(jwtProperties.getAccessTokenExpiration());
 
         return Jwts.builder()
                 // 로그인 아이디 저장
@@ -42,26 +42,26 @@ public class JwtProvider {
                         "role",
                         userDetails.getRole().name()
                 )
-                .issuedAt(now)
-                .expiration(expiration)
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(expiration))
                 .signWith(getSecretKey())
                 .compact();
     }
 
     // RefreshToken 생성
     public String createRefreshToken(CustomUserDetails userDetails) {
-        Date now = new Date();
+        Instant now = Instant.now();
 
-        Date expiration =
-                new Date(now.getTime() + jwtProperties.getRefreshTokenExpiration());
+        Instant expiration =
+                now.plusMillis(jwtProperties.getRefreshTokenExpiration());
 
         return Jwts.builder()
                 // 로그인 식별자
                 .subject(userDetails.getUsername())
                 // 사용자 PK
                 .claim("userId", userDetails.getUserId())
-                .issuedAt(now)
-                .expiration(expiration)
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(expiration))
                 .signWith(getSecretKey())
                 .compact();
     }
@@ -90,27 +90,10 @@ public class JwtProvider {
 
     }
 
-    // 만료 시간 반환
-    public LocalDateTime getRefreshTokenExpiredAt() {
-        return LocalDateTime.now()
-                .plusSeconds(jwtProperties.getRefreshTokenExpiration() / 1000);
-    }
-
-    // JWT에 저장된 username 반환
-    public String getUsername(String token) {
-        return getClaims(token).getSubject();
-
-    }
-
     // JWT에 저장된 사용자 PK 반환
     public Long getUserId(String token) {
         Object userId = getClaims(token).get("userId");
 
         return ((Number) userId).longValue();
-    }
-
-    // JWT 만료 시간 반환
-    public Date getExpiration(String token) {
-        return getClaims(token).getExpiration();
     }
 }
