@@ -32,6 +32,4 @@ public class ItsHereException extends RuntimeException {
         this.errorCode = errorCode;
         this.details = details;
     }
-
-
 }

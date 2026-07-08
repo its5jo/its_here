@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
-import java.time.Instant;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -64,12 +63,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ItsHereException.class)
     public ResponseEntity<ErrorResponse> handleItsHereException(ItsHereException e) {
         log.error("[ItsHereException] = {}", e.getMessage());
+
         ErrorCode code = e.getErrorCode();
-        Map<String, Object> details = e.getDetails() != null ? e.getDetails() : Map.of("reason", e.getMessage());
+        Map<String, Object> details = e.getDetails() != null && !e.getDetails().isEmpty()
+                ? e.getDetails()
+                : Map.of("reason", e.getMessage());
+
         return ResponseEntity.status(code.getStatus())
-                .body(new ErrorResponse(
-                        Instant.now(),
-                        code.getCode(),
+                .body(ErrorResponse.from(
+                        code,
                         code.getMessage(),
                         details
                 ));
