@@ -11,10 +11,10 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "p_product")
-public class Product extends BaseEntity {
+public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private UUID id;
 
     @Column(nullable = false)
@@ -34,7 +34,9 @@ public class Product extends BaseEntity {
 //    @ManyToOne(fetch = FetchType.LAZY, optional = false)
 //    private Store store;  // TODO: Store Entity 생성되면 주석 풀어서 연관관계 설정
 
-    private Product(String name, String description, boolean hasHidden, Integer price, String imageUrl) {
+    private Product(String name, String description, boolean hasHidden, int price, String imageUrl) {
+        validateName(name);
+        validatePrice(price);
         this.name = name;
         this.description = description;
         this.hasHidden = hasHidden;
@@ -42,18 +44,31 @@ public class Product extends BaseEntity {
         this.imageUrl = imageUrl;
     }
 
-    public static Product create(Product product) {
+    public static Product create(
+            String name,
+            String description,
+            boolean hasHidden,
+            int price,
+            String imageUrl
+    ) {
         return new Product(
-                product.getName(),
-                product.getDescription(),
-                product.isHasHidden(),
-                product.getPrice(),
-                product.getImageUrl()
+                name,
+                description,
+                hasHidden,
+                price,
+                imageUrl
         );
     }
 
-    public void update(String name, String description, Boolean hasHidden, Integer price, String imageUrl) {
+    public void update(
+            String name,
+            String description,
+            Boolean hasHidden,
+            Integer price,
+            String imageUrl
+    ) {
         if (name != null) {
+            validateName(name);
             this.name = name;
         }
 
@@ -66,13 +81,26 @@ public class Product extends BaseEntity {
         }
 
         if (price != null) {
+            validatePrice(price);
             this.price = price;
         }
 
         if (imageUrl != null) {
             this.imageUrl = imageUrl;
         }
-
     }
+
+    private static void validateName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("상품명은 필수입니다.");
+        }
+    }
+
+    private static void validatePrice(int price) {
+        if (price < 0) {
+            throw new IllegalArgumentException("상품 가격은 0원 이상이어야 합니다.");
+        }
+    }
+
 
 }
