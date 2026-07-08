@@ -1,0 +1,99 @@
+package com.spring.its_here.global.security;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.Date;
+
+@Component
+@RequiredArgsConstructor
+public class JwtProvider {
+
+    private final JwtProperties jwtProperties;
+
+    // SecretKey 객체로 변환
+    private SecretKey getSecretKey() {
+        return Keys.hmacShaKeyFor(
+                jwtProperties.getSecretKey().getBytes(StandardCharsets.UTF_8)
+        );
+    }
+
+    // Access Token 생성
+    public String createAccessToken(CustomUserDetails userDetails) {
+        Instant now = Instant.now();
+
+        Instant expiration =
+                now.plusMillis(jwtProperties.getAccessTokenExpiration());
+
+        return Jwts.builder()
+                // 로그인 아이디 저장
+                .subject(userDetails.getUsername())
+                // 사용자 PK 저장
+                .claim("userId", userDetails.getUserId())
+                // 사용자 권한 저장
+                .claim(
+                        "role",
+                        userDetails.getRole().name()
+                )
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(expiration))
+                .signWith(getSecretKey())
+                .compact();
+    }
+
+    // RefreshToken 생성
+    public String createRefreshToken(CustomUserDetails userDetails) {
+        Instant now = Instant.now();
+
+        Instant expiration =
+                now.plusMillis(jwtProperties.getRefreshTokenExpiration());
+
+        return Jwts.builder()
+                // 로그인 식별자
+                .subject(userDetails.getUsername())
+                // 사용자 PK
+                .claim("userId", userDetails.getUserId())
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(expiration))
+                .signWith(getSecretKey())
+                .compact();
+    }
+
+    // JWT 검증
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parser()
+                    .verifyWith(getSecretKey())
+                    .build()
+                    .parseSignedClaims(token);
+
+            return true;
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    // JWT 내부 Claim 정보 반환
+    public Claims getClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(getSecretKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+    }
+
+    // JWT에 저장된 사용자 PK 반환
+    public Long getUserId(String token) {
+        Object userId = getClaims(token).get("userId");
+
+        return ((Number) userId).longValue();
+    }
+}

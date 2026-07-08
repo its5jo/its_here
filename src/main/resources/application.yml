@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: local
+    active: local, secret
 
   servlet:
     multipart:

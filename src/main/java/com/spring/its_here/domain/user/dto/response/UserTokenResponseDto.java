@@ -1,0 +1,6 @@
+package com.spring.its_here.domain.user.dto.response;
+
+public record UserTokenResponseDto(
+        String accessToken
+) {
+}
