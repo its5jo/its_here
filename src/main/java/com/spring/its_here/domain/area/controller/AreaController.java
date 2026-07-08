@@ -1,14 +1,14 @@
 package com.spring.its_here.domain.area.controller;
 
 
-import com.spring.its_here.domain.area.dto.request.CreateAreaRequestDto;
-import com.spring.its_here.domain.area.dto.request.GetAllAreaRequestDto;
-import com.spring.its_here.domain.area.dto.request.GetOneRequestDto;
-import com.spring.its_here.domain.area.dto.request.UpdateAreaRequestDto;
-import com.spring.its_here.domain.area.dto.response.CreateAreaResponseDto;
-import com.spring.its_here.domain.area.dto.response.GetAllAreaResponseDto;
-import com.spring.its_here.domain.area.dto.response.GetOneAreaResponseDto;
-import com.spring.its_here.domain.area.dto.response.UpdateAreaResponseDto;
+import com.spring.its_here.domain.area.dto.request.AreaCreateRequestDto;
+import com.spring.its_here.domain.area.dto.request.AreaGetAllRequestDto;
+import com.spring.its_here.domain.area.dto.request.AreaGetOneRequestDto;
+import com.spring.its_here.domain.area.dto.request.AreaUpdateRequestDto;
+import com.spring.its_here.domain.area.dto.response.AreaCreateResponseDto;
+import com.spring.its_here.domain.area.dto.response.AreaGetOneResponseDto;
+import com.spring.its_here.domain.area.dto.response.AreaGetAllResponseDto;
+import com.spring.its_here.domain.area.dto.response.AreaUpdateResponseDto;
 import com.spring.its_here.domain.area.service.AreaService;
 import com.spring.its_here.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -25,53 +25,53 @@ public class AreaController {
     private final AreaService areaService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<CreateAreaResponseDto>> createArea(
-            @RequestBody CreateAreaRequestDto createAreaRequestDto
+    public ResponseEntity<ApiResponse<AreaCreateResponseDto>> areaCreate(
+            @RequestBody AreaCreateRequestDto areaCreateRequestDto
     ) {
-        CreateAreaResponseDto createAreaResponseDto = areaService.createArea(createAreaRequestDto);
+        AreaCreateResponseDto areaCreateResponseDto = areaService.areaCreate(areaCreateRequestDto);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(ApiResponse.success("서비스 지역 등록 성공", createAreaResponseDto));
+                .body(ApiResponse.success("서비스 지역 등록 성공", areaCreateResponseDto));
     }
 
     @GetMapping("/{areaId}")
-    public ResponseEntity<ApiResponse<GetOneAreaResponseDto>> getOneArea(
-            @RequestBody GetOneRequestDto getOneRequestDto,
+    public ResponseEntity<ApiResponse<AreaGetOneResponseDto>> areaGetOne(
+            @RequestBody AreaGetOneRequestDto areaGetOneRequestDto,
             @PathVariable("areaId") UUID areaId
     ) {
-        GetOneAreaResponseDto getOneAreaResponseDto = areaService.getOneArea(
-                getOneRequestDto,
+        AreaGetOneResponseDto areaGetOneResponseDto = areaService.areaGetOne(
+                areaGetOneRequestDto,
                 areaId
         );
 
-        return ResponseEntity.ok(ApiResponse.success("서비스 지역 상세 조회 성공", getOneAreaResponseDto));
+        return ResponseEntity.ok(ApiResponse.success("서비스 지역 상세 조회 성공", areaGetOneResponseDto));
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<GetAllAreaResponseDto>> getAllArea(
-            @RequestBody GetAllAreaRequestDto getAllAreaRequestDto
+    public ResponseEntity<ApiResponse<AreaGetAllResponseDto>> areaGetAll(
+            @RequestBody AreaGetAllRequestDto areaGetAllRequestDto
     ) {
-        GetAllAreaResponseDto getAllAreaResponseDto = areaService.getAllArea(getAllAreaRequestDto);
+        AreaGetAllResponseDto areaGetAllResponseDto = areaService.areaGetAll(areaGetAllRequestDto);
 
-        return ResponseEntity.ok(ApiResponse.success("서비스 지역 전체 조회 성공", getAllAreaResponseDto));
+        return ResponseEntity.ok(ApiResponse.success("서비스 지역 전체 조회 성공", areaGetAllResponseDto));
     }
 
     @PutMapping("/{areaId}")
-    public ResponseEntity<ApiResponse<UpdateAreaResponseDto>> updateArea(
-            @RequestBody UpdateAreaRequestDto updateAreaRequestDto,
+    public ResponseEntity<ApiResponse<AreaUpdateResponseDto>> areaUpdate(
+            @RequestBody AreaUpdateRequestDto areaUpdateRequestDto,
             @PathVariable("areaId") UUID areaId
     ) {
-        UpdateAreaResponseDto updateAreaResponseDto = areaService.updateArea(updateAreaRequestDto, areaId);
+        AreaUpdateResponseDto areaUpdateResponseDto = areaService.areaUpdate(areaUpdateRequestDto, areaId);
 
-        return ResponseEntity.ok(ApiResponse.success("서비스 지역 수정 성공", updateAreaResponseDto));
+        return ResponseEntity.ok(ApiResponse.success("서비스 지역 수정 성공", areaUpdateResponseDto));
     }
 
     @DeleteMapping("/{areaId}")
-    public ResponseEntity<Void> deleteArea(
+    public ResponseEntity<Void> areaDelete(
             @PathVariable("areaId") UUID areaId
     ) {
-        areaService.deleteArea(areaId);
+        areaService.areaDelete(areaId);
         return ResponseEntity.ok().build();
     }
 }
