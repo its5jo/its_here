@@ -8,6 +8,7 @@ import com.spring.its_here.domain.user.dto.response.TokenPairDto;
 import com.spring.its_here.domain.user.dto.response.UserResponseDto;
 import com.spring.its_here.domain.user.dto.response.UserSelfGetResponseDto;
 import com.spring.its_here.domain.user.entity.UserEntity;
+import com.spring.its_here.domain.user.enums.UserRole;
 import com.spring.its_here.domain.user.repository.UserRepository;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
@@ -38,6 +39,11 @@ public class UserService {
         // 동일한 닉네임 존재 확인
         if (userRepository.existsByUsernameAndHasDeletedFalse(userCreateRequestDto.username())) {
             throw new ItsHereException(ErrorCode.DUPLICATE_USERNAME);
+        }
+
+        // CUSTOMER, MANAGER 제외 생성 불가능
+        if (userCreateRequestDto.role() != UserRole.CUSTOMER && userCreateRequestDto.role() != UserRole.OWNER) {
+            throw new ItsHereException(ErrorCode.INVALID_REQUEST);
         }
 
         // 비밀번호 암호화
