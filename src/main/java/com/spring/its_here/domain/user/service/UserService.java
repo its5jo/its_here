@@ -165,16 +165,16 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public UserSelfGetResponseDto getSelf() {
-        // SecurityContext에 저장된 현재 로그인 사용자의 PK를 조회한다.
+        // SecurityContext에 저장된 현재 로그인 사용자의 PK를 조회
         Long userId = authenticationFacade.getCurrentUserId();
 
-        // PK를 이용하여 최신 사용자 정보를 조회한다.
+        // PK를 이용하여 최신 사용자 정보를 조회
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() ->
                         new ItsHereException(ErrorCode.USER_NOT_FOUND)
                 );
 
-        // 최신 사용자 정보를 응답 DTO로 변환하여 반환한다.
+        // 최신 사용자 정보를 응답 DTO로 변환하여 반환
         return new UserSelfGetResponseDto(
                 user.getUsername(),
                 user.getNickname(),
