@@ -19,7 +19,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class AreaService {
-    private AreaRepository areaRepository;
+    private final AreaRepository areaRepository;
 
     @Transactional
     public AreaCreateResponseDto areaCreate(AreaCreateRequestDto areaCreateRequestDto) {
