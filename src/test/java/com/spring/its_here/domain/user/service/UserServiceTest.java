@@ -113,7 +113,7 @@ class UserServiceTest {
         }
 
         @Test
-        @DisplayName("회원가입 실패 - 중복된 Username이면 예외가 발생")
+        @DisplayName("회원가입 실패 - 중복된 Username 또는 Nickname이면 예외가 발생")
         void signup_duplicate_username() {
             // given
             UserCreateRequestDto request = new UserCreateRequestDto(
@@ -126,17 +126,30 @@ class UserServiceTest {
             when(userRepository.existsByUsernameAndHasDeletedFalse("testUser"))
                     .thenReturn(true);
 
-            // when & then
+            when(userRepository.existsByNicknameAndHasDeletedFalse("테스터"))
+                    .thenReturn(true);
+
+            // when
             ItsHereException exception = assertThrows(
                     ItsHereException.class,
                     () -> userService.signup(request)
             );
 
+            // then
             assertThat(exception.getErrorCode())
                     .isEqualTo(ErrorCode.DUPLICATE_USERNAME);
 
-            verify(userRepository, never()).save(any());
-            verify(passwordEncoder, never()).encode(anyString());
+            verify(userRepository)
+                    .existsByUsernameAndHasDeletedFalse("testUser");
+
+            verify(userRepository)
+                    .existsByNicknameAndHasDeletedFalse("테스터");
+
+            verify(userRepository, never())
+                    .save(any(UserEntity.class));
+
+            verify(passwordEncoder, never())
+                    .encode(anyString());
         }
     }
 
