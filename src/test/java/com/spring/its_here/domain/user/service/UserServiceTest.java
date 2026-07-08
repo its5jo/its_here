@@ -1,7 +1,5 @@
 package com.spring.its_here.domain.user.service;
 
-import com.spring.its_here.domain.auth.entity.RefreshTokenEntity;
-import com.spring.its_here.domain.auth.repository.RefreshTokenRepository;
 import com.spring.its_here.domain.user.dto.request.UserCreateRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserLoginRequestDto;
 import com.spring.its_here.domain.user.dto.response.TokenPairDto;
@@ -30,7 +28,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -52,9 +49,6 @@ class UserServiceTest {
 
     @Mock
     private JwtProvider jwtProvider;
-
-    @Mock
-    private RefreshTokenRepository refreshTokenRepository;
 
     @Mock
     private AuthenticationFacade authenticationFacade;
@@ -159,6 +153,7 @@ class UserServiceTest {
         @Test
         @DisplayName("로그인 성공")
         void login_success() {
+            // given
             UserLoginRequestDto request =
                     new UserLoginRequestDto(
                             "test",
@@ -175,39 +170,44 @@ class UserServiceTest {
 
             ReflectionTestUtils.setField(user, "id", 1L);
 
-            CustomUserDetails details =
-                    new CustomUserDetails(user);
+            CustomUserDetails userDetails = new CustomUserDetails(user);
+
 
             Authentication authentication =
                     new UsernamePasswordAuthenticationToken(
-                            details,
+                            userDetails,
                             null,
-                            details.getAuthorities()
+                            userDetails.getAuthorities()
                     );
 
-            when(authenticationManager.authenticate(any()))
+            when(authenticationManager.authenticate(any(
+                    UsernamePasswordAuthenticationToken.class
+            )))
                     .thenReturn(authentication);
 
-            when(jwtProvider.createAccessToken(details))
+            when(jwtProvider.createAccessToken(any(CustomUserDetails.class)))
                     .thenReturn("access");
-
-            when(jwtProvider.createRefreshToken(details))
+            when(jwtProvider.createRefreshToken(any(CustomUserDetails.class)))
                     .thenReturn("refresh");
 
-            when(jwtProvider.getRefreshTokenExpiredAt())
-                    .thenReturn(LocalDateTime.now().plusSeconds(1209600));
 
-            TokenPairDto result =
-                    userService.login(request);
+            // when
+            TokenPairDto result = userService.login(request);
 
+
+            // then
             assertThat(result.accessToken()).isEqualTo("access");
             assertThat(result.refreshToken()).isEqualTo("refresh");
 
-            verify(refreshTokenRepository)
-                    .deleteByUserId(1L);
 
-            verify(refreshTokenRepository)
-                    .save(any(RefreshTokenEntity.class));
+            verify(authenticationManager)
+                    .authenticate(any(
+                            UsernamePasswordAuthenticationToken.class
+                    ));
+            verify(jwtProvider)
+                    .createAccessToken(any(CustomUserDetails.class));
+            verify(jwtProvider)
+                    .createRefreshToken(any(CustomUserDetails.class));
         }
 
         @Test
@@ -234,10 +234,6 @@ class UserServiceTest {
             // 이후 로직이 수행되지 않아야 함
             verify(jwtProvider, never()).createAccessToken(any());
             verify(jwtProvider, never()).createRefreshToken(any());
-            verify(jwtProvider, never()).getRefreshTokenExpiredAt();
-
-            verify(refreshTokenRepository, never()).deleteByUserId(anyLong());
-            verify(refreshTokenRepository, never()).save(any(RefreshTokenEntity.class));
 
             verifyNoInteractions(userRepository);
         }
@@ -249,6 +245,9 @@ class UserServiceTest {
         @Test
         @DisplayName("토큰 재발급 성공")
         void reissue_success() {
+            // given
+            String refreshToken = "oldRefreshToken";
+
             UserEntity user =
                     UserEntity.create(
                             "test",
@@ -259,122 +258,86 @@ class UserServiceTest {
 
             ReflectionTestUtils.setField(user, "id", 1L);
 
-            RefreshTokenEntity entity =
-                    new RefreshTokenEntity(
-                            1L,
-                            "oldRefresh",
-                            LocalDateTime.now()
-                    );
-
-            when(jwtProvider.validateToken(anyString()))
-                    .thenReturn(true);
-
-            when(refreshTokenRepository.findByRefreshToken("oldRefresh"))
-                    .thenReturn(Optional.of(entity));
-
+            when(jwtProvider.getUserId(refreshToken))
+                    .thenReturn(1L);
             when(userRepository.findById(1L))
                     .thenReturn(Optional.of(user));
-
-            when(jwtProvider.createAccessToken(any()))
+            when(jwtProvider.createAccessToken(any(CustomUserDetails.class)))
                     .thenReturn("newAccess");
-
-            when(jwtProvider.createRefreshToken(any()))
+            when(jwtProvider.createRefreshToken(any(CustomUserDetails.class)))
                     .thenReturn("newRefresh");
 
-            when(jwtProvider.getRefreshTokenExpiredAt())
-                    .thenReturn(LocalDateTime.now().plusSeconds(1209600));
-
+            // when
             TokenPairDto result =
-                    userService.reissue("oldRefresh");
+                    userService.reissue(refreshToken);
 
-            assertThat(result.accessToken()).isEqualTo("newAccess");
-            assertThat(result.refreshToken()).isEqualTo("newRefresh");
+            // then
+            assertThat(result.accessToken())
+                    .isEqualTo("newAccess");
 
-            verify(refreshTokenRepository)
-                    .deleteByUserId(1L);
+            assertThat(result.refreshToken())
+                    .isEqualTo("newRefresh");
 
-            verify(refreshTokenRepository)
-                    .save(any(RefreshTokenEntity.class));
+            verify(jwtProvider).validateToken(refreshToken);
+            verify(jwtProvider).getUserId(refreshToken);
+            verify(userRepository).findById(1L);
+            verify(jwtProvider).createAccessToken(any(CustomUserDetails.class));
+            verify(jwtProvider).createRefreshToken(any(CustomUserDetails.class));
         }
 
         @Test
-        @DisplayName("토큰 재발급 실패 - RefreshToken이 존재하지 않으면 예외가 발생")
-        void reissue_fail_refreshTokenNotFound() {
+        @DisplayName("토큰 재발급 실패 - RefreshToken 검증 실패")
+        void reissue_fail_invalid_refreshToken() {
             // given
-            String refreshToken = "invalidRefreshToken";
+            String refreshToken = "invalidToken";
 
-            when(jwtProvider.validateToken(anyString()))
-                    .thenReturn(false);
-
-            when(refreshTokenRepository.findByRefreshToken(refreshToken))
-                    .thenReturn(Optional.empty());
+            doThrow(new ItsHereException(ErrorCode.AUTH_UNAUTHORIZED))
+                    .when(jwtProvider)
+                    .validateToken(refreshToken);
 
             // when
-            ItsHereException exception = assertThrows(
-                    ItsHereException.class,
-                    () -> userService.reissue(refreshToken)
-            );
+            ItsHereException exception =
+                    assertThrows(
+                            ItsHereException.class,
+                            () -> userService.reissue(refreshToken)
+                    );
 
             // then
             assertThat(exception.getErrorCode())
                     .isEqualTo(ErrorCode.AUTH_UNAUTHORIZED);
 
             verify(jwtProvider).validateToken(refreshToken);
-            verify(refreshTokenRepository).findByRefreshToken(refreshToken);
-
-            // 이후 로직은 수행되지 않아야 한다.
+            verify(jwtProvider, never()).getUserId(anyString());
             verify(userRepository, never()).findById(anyLong());
-
             verify(jwtProvider, never()).createAccessToken(any());
             verify(jwtProvider, never()).createRefreshToken(any());
-            verify(jwtProvider, never()).getRefreshTokenExpiredAt();
-
-            verify(refreshTokenRepository, never()).deleteByUserId(anyLong());
-            verify(refreshTokenRepository, never()).save(any(RefreshTokenEntity.class));
         }
 
         @Test
-        @DisplayName("토큰 재발급 실패 - 사용자가 존재하지 않으면 예외가 발생")
+        @DisplayName("토큰 재발급 실패 - 사용자가 존재하지 않으면 예외 발생")
         void reissue_fail_userNotFound() {
             // given
             String refreshToken = "validRefreshToken";
 
-            RefreshTokenEntity refreshTokenEntity = new RefreshTokenEntity(
-                    1L,
-                    refreshToken,
-                    LocalDateTime.now().plusSeconds(60 * 60 * 24 * 14)
-            );
-
-            when(jwtProvider.validateToken(anyString()))
-                    .thenReturn(false);
-
-            when(refreshTokenRepository.findByRefreshToken(refreshToken))
-                    .thenReturn(Optional.of(refreshTokenEntity));
-
-            when(userRepository.findById(1L))
-                    .thenReturn(Optional.empty());
+            when(jwtProvider.getUserId(refreshToken)).thenReturn(1L);
+            when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
             // when
-            ItsHereException exception = assertThrows(
-                    ItsHereException.class,
-                    () -> userService.reissue(refreshToken)
-            );
+            ItsHereException exception =
+                    assertThrows(
+                            ItsHereException.class,
+                            () -> userService.reissue(refreshToken)
+                    );
 
             // then
             assertThat(exception.getErrorCode())
                     .isEqualTo(ErrorCode.AUTH_UNAUTHORIZED);
 
             verify(jwtProvider).validateToken(refreshToken);
-            verify(refreshTokenRepository).findByRefreshToken(refreshToken);
+            verify(jwtProvider).getUserId(refreshToken);
             verify(userRepository).findById(1L);
-
-            // 이후 로직은 수행되지 않아야 한다.
             verify(jwtProvider, never()).createAccessToken(any());
             verify(jwtProvider, never()).createRefreshToken(any());
-            verify(jwtProvider, never()).getRefreshTokenExpiredAt();
-
-            verify(refreshTokenRepository, never()).deleteByUserId(anyLong());
-            verify(refreshTokenRepository, never()).save(any(RefreshTokenEntity.class));
         }
 
         @Test
@@ -403,12 +366,10 @@ class UserServiceTest {
             verify(jwtProvider).validateToken(refreshToken);
 
             // 이후 로직은 수행되지 않아야 한다.
-            verifyNoInteractions(refreshTokenRepository);
             verifyNoInteractions(userRepository);
 
             verify(jwtProvider, never()).createAccessToken(any());
             verify(jwtProvider, never()).createRefreshToken(any());
-            verify(jwtProvider, never()).getRefreshTokenExpiredAt();
         }
     }
 
