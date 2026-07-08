@@ -6,6 +6,10 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -32,6 +36,20 @@ public class Product extends BaseEntity {
 
     @Column(name = "image_url")
     private String imageUrl;
+
+    @LastModifiedDate
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    @LastModifiedBy
+    @Column(name = "updated_by")
+    private Long updatedBy;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
+    @Column(name = "deleted_by")
+    private Long deletedBy;
 
 //    @JoinColumn(name = "store_id", nullable = false)
 //    @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -92,6 +110,12 @@ public class Product extends BaseEntity {
             this.imageUrl = imageUrl;
         }
     }
+
+    public void delete(Long deletedBy) {
+        this.deletedAt = Instant.now();
+        this.deletedBy = deletedBy;
+    }
+
 
     private static void validateName(String name) {
         if (name == null || name.isBlank()) {
