@@ -15,6 +15,7 @@ import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
 import com.spring.its_here.global.security.AuthenticationFacade;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,7 @@ public class AreaService {
     private final AuthenticationFacade authenticationFacade;
 
     @Transactional
+    @PreAuthorize("hasAnyAuthority('MANAGER','MASTER')")
     public AreaCreateResponseDto createArea(AreaCreateRequestDto areaCreateRequestDto) {
         if (areaRepository.existsByCityAndDistrictAndTown(
                 areaCreateRequestDto.city(),
@@ -46,6 +48,7 @@ public class AreaService {
         area.assignCreatedBy(userId);
 
         Area areaSave = areaRepository.save(area);
+
         return new AreaCreateResponseDto(
                 areaSave.getId(),
                 areaSave.isHasAvailable()

@@ -27,7 +27,6 @@ public class AreaController {
     private final AreaService areaService;
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('MANAGER','MASTER')")
     public ResponseEntity<ApiResponse<AreaCreateResponseDto>> createArea(
             @Valid @RequestBody AreaCreateRequestDto areaCreateRequestDto
     ) {
