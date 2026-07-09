@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-public record UserCreateRequestDto(
+public record UserSignupRequestDto(
         @NotBlank(message = "아이디는 필수입니다.")
         @Size(min = 4, max = 10, message = "아이디는 4자 이상 10자 이하입니다.")
         @Pattern(

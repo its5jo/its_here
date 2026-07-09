@@ -1,6 +1,6 @@
 package com.spring.its_here.domain.user.service;
 
-import com.spring.its_here.domain.user.dto.request.UserCreateRequestDto;
+import com.spring.its_here.domain.user.dto.request.UserSignupRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserLoginRequestDto;
 import com.spring.its_here.domain.user.dto.response.TokenPairDto;
 import com.spring.its_here.domain.user.dto.response.UserResponseDto;
@@ -32,28 +32,28 @@ public class UserService {
     private final AuthenticationFacade authenticationFacade;
 
     @Transactional
-    public UserResponseDto signup(UserCreateRequestDto userCreateRequestDto) {
+    public UserResponseDto signup(UserSignupRequestDto userSignupRequestDto) {
         // 동일한 아이디, 닉네임 존재 확인
-        if (userRepository.existsByUsernameAndHasDeletedFalse(userCreateRequestDto.username())
-            && userRepository.existsByNicknameAndHasDeletedFalse(userCreateRequestDto.nickname())
+        if (userRepository.existsByUsernameAndHasDeletedFalse(userSignupRequestDto.username())
+            && userRepository.existsByNicknameAndHasDeletedFalse(userSignupRequestDto.nickname())
         ) {
             throw new ItsHereException(ErrorCode.DUPLICATE_USERNAME);
         }
 
         // CUSTOMER, MANAGER 제외 생성 불가능
-        if (userCreateRequestDto.role() != UserRole.CUSTOMER && userCreateRequestDto.role() != UserRole.OWNER) {
+        if (userSignupRequestDto.role() != UserRole.CUSTOMER && userSignupRequestDto.role() != UserRole.OWNER) {
             throw new ItsHereException(ErrorCode.INVALID_REQUEST);
         }
 
         // 비밀번호 암호화
-        String encodedPassword = passwordEncoder.encode(userCreateRequestDto.password());
+        String encodedPassword = passwordEncoder.encode(userSignupRequestDto.password());
 
         // 사용자 생성
         UserEntity user = UserEntity.create(
-                userCreateRequestDto.username(),
+                userSignupRequestDto.username(),
                 encodedPassword,
-                userCreateRequestDto.nickname(),
-                userCreateRequestDto.role()
+                userSignupRequestDto.nickname(),
+                userSignupRequestDto.role()
         );
 
         // 사용자 저장

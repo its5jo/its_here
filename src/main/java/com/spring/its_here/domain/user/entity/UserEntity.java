@@ -1,7 +1,7 @@
 package com.spring.its_here.domain.user.entity;
 
 import com.spring.its_here.domain.user.enums.UserRole;
-import com.spring.its_here.global.base.BaseEntity;
+import com.spring.its_here.global.base.BaseDeletableEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -13,25 +13,26 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Getter
-public class UserEntity extends BaseEntity {
+public class UserEntity extends BaseDeletableEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", nullable = false, updatable = false)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "username", unique = true, nullable = false)
     private String username;
 
-    @Column(nullable = false)
+    @Column(name = "password", nullable = false)
     private String password;
 
-    @Column(nullable = false)
+    @Column(name = "nickname", nullable = false)
     private String nickname;
 
-    @Column(nullable = false)
+    @Column(name = "role", nullable = false)
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
-    @Column(nullable = false)
+    @Column(name = "has_deleted", nullable = false)
     private Boolean hasDeleted;
 
 

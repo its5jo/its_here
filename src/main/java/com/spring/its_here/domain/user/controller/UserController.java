@@ -1,6 +1,6 @@
 package com.spring.its_here.domain.user.controller;
 
-import com.spring.its_here.domain.user.dto.request.UserCreateRequestDto;
+import com.spring.its_here.domain.user.dto.request.UserSignupRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserLoginRequestDto;
 import com.spring.its_here.domain.user.dto.response.TokenPairDto;
 import com.spring.its_here.domain.user.dto.response.UserResponseDto;
@@ -36,14 +36,14 @@ public class UserController {
     @SecurityRequirements()
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<UserResponseDto>> signup(
-            @Valid @RequestBody UserCreateRequestDto userCreateRequestDto
+            @Valid @RequestBody UserSignupRequestDto userSignupRequestDto
     ) {
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(
                         "회원가입 성공",
-                        userService.signup(userCreateRequestDto)
+                        userService.signup(userSignupRequestDto)
                 ));
     }
 

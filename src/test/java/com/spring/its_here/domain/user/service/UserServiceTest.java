@@ -1,6 +1,6 @@
 package com.spring.its_here.domain.user.service;
 
-import com.spring.its_here.domain.user.dto.request.UserCreateRequestDto;
+import com.spring.its_here.domain.user.dto.request.UserSignupRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserLoginRequestDto;
 import com.spring.its_here.domain.user.dto.response.TokenPairDto;
 import com.spring.its_here.domain.user.dto.response.UserResponseDto;
@@ -63,7 +63,7 @@ class UserServiceTest {
         @DisplayName("회원가입 성공")
         void signup_success() {
             // given
-            UserCreateRequestDto request = new UserCreateRequestDto(
+            UserSignupRequestDto request = new UserSignupRequestDto(
                     "testUser",
                     "Password123!",
                     "테스터",
@@ -110,7 +110,7 @@ class UserServiceTest {
         @DisplayName("회원가입 실패 - 중복된 Username 또는 Nickname이면 예외가 발생")
         void signup_duplicate_username() {
             // given
-            UserCreateRequestDto request = new UserCreateRequestDto(
+            UserSignupRequestDto request = new UserSignupRequestDto(
                     "testUser",
                     "Password123!",
                     "테스터",
