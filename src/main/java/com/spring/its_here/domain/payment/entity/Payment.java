@@ -4,7 +4,9 @@ import com.spring.its_here.domain.payment.enums.PaymentMethod;
 import com.spring.its_here.domain.payment.enums.PaymentStatus;
 import com.spring.its_here.global.base.BaseEntity;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -12,6 +14,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "p_payment")
 @Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Payment extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
