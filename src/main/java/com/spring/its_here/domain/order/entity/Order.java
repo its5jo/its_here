@@ -1,6 +1,7 @@
 package com.spring.its_here.domain.order.entity;
 
 import com.spring.its_here.domain.order.enums.OrderStatus;
+import com.spring.its_here.global.base.BaseDeletableEntity;
 import com.spring.its_here.global.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -15,7 +16,7 @@ import java.util.UUID;
 @Table(name = "p_order")
 @Getter
 @NoArgsConstructor
-public class Order extends BaseEntity {
+public class Order extends BaseDeletableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -39,22 +40,6 @@ public class Order extends BaseEntity {
 
     @Column(name = "request_memo")
     private String requestMemo;
-
-    // ===== 수정 감사 필드  =====
-    @LastModifiedDate
-    @Column(name = "updated_at")
-    private Instant updatedAt;
-
-    @LastModifiedBy
-    @Column(name = "updated_by")
-    private Long updatedBy;
-
-    // ===== 삭제 감사 필드 =====
-    @Column(name = "deleted_at")
-    private Instant deletedAt;
-
-    @Column(name = "deleted_by")
-    private Long deletedBy;
 
     public static Order create(UUID storeId, Long userId,
                                String deliveryAddress, String requestMemo,
