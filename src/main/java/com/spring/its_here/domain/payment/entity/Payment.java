@@ -41,7 +41,7 @@ public class Payment extends BaseEntity {
         Payment payment = new Payment();
         payment.orderId = orderId;
         payment.amount = amount;
-        payment.originalAmount = amount;   // 할인 없으니 동일
+        payment.originalAmount = amount;  // 할인이 없으면 amount와 동일. 추후 할인/쿠폰 기능 붙였을 때 추가 수정
         payment.method = method;
         payment.status = PaymentStatus.COMPLETED;
         payment.approvedAt = Instant.now();  // PG 없으니 생성 시각 = 승인 시각
