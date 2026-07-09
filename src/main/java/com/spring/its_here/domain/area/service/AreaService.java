@@ -9,7 +9,11 @@ import com.spring.its_here.domain.area.dto.response.AreaCreateResponseDto;
 import com.spring.its_here.domain.area.dto.response.AreaGetAllResponseDto;
 import com.spring.its_here.domain.area.dto.response.AreaGetOneResponseDto;
 import com.spring.its_here.domain.area.dto.response.AreaUpdateResponseDto;
+import com.spring.its_here.domain.area.entity.Area;
 import com.spring.its_here.domain.area.repository.AreaRepository;
+import com.spring.its_here.global.advice.ErrorCode;
+import com.spring.its_here.global.advice.ItsHereException;
+import com.spring.its_here.global.security.AuthenticationFacade;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,14 +24,36 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AreaService {
     private final AreaRepository areaRepository;
+    private final AuthenticationFacade authenticationFacade;
 
     @Transactional
-    public AreaCreateResponseDto areaCreate(AreaCreateRequestDto areaCreateRequestDto) {
-        return null;
+    public AreaCreateResponseDto createArea(AreaCreateRequestDto areaCreateRequestDto) {
+        if (areaRepository.existsByCityAndDistrictAndTown(
+                areaCreateRequestDto.city(),
+                areaCreateRequestDto.district(),
+                areaCreateRequestDto.town()
+        )) {
+            throw new ItsHereException(ErrorCode.AREA_ALREADY_EXISTS);
+        }
+
+        Long userId = authenticationFacade.getCurrentUserId();
+
+        Area area = Area.create(
+                areaCreateRequestDto.city(),
+                areaCreateRequestDto.district(),
+                areaCreateRequestDto.town()
+        );
+        area.assignCreatedBy(userId);
+
+        Area areaSave = areaRepository.save(area);
+        return new AreaCreateResponseDto(
+                areaSave.getId(),
+                areaSave.isHasAvailable()
+        );
     }
 
     @Transactional(readOnly = true)
-    public AreaGetOneResponseDto areaGetOne(
+    public AreaGetOneResponseDto getOneArea(
             AreaGetOneRequestDto areagetOneRequestDto,
             UUID areaId
     ) {
@@ -35,12 +61,12 @@ public class AreaService {
     }
 
     @Transactional(readOnly = true)
-    public AreaGetAllResponseDto areaGetAll(AreaGetAllRequestDto areaGetAllRequestDto) {
+    public AreaGetAllResponseDto getAllArea(AreaGetAllRequestDto areaGetAllRequestDto) {
         return null;
     }
 
     @Transactional
-    public AreaUpdateResponseDto areaUpdate(
+    public AreaUpdateResponseDto updateArea(
             AreaUpdateRequestDto areaUpdateRequestDto,
             UUID areaId
     ) {
@@ -48,7 +74,7 @@ public class AreaService {
     }
 
     @Transactional
-    public void areaDelete(UUID areaId) {
+    public void deleteArea(UUID areaId) {
 
     }
 }
