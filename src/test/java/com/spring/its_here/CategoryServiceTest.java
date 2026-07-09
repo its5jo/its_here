@@ -2,12 +2,11 @@ package com.spring.its_here;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-import java.util.UUID;
 
 import com.spring.its_here.domain.category.dto.request.CategoryCreateRequestDto;
 import com.spring.its_here.domain.category.dto.response.CategoryCreateResponseDto;
@@ -16,6 +15,8 @@ import com.spring.its_here.domain.category.mapper.CategoryMapper;
 import com.spring.its_here.domain.category.repository.CategoryRepository;
 import com.spring.its_here.domain.category.service.CategoryService;
 
+import com.spring.its_here.global.advice.ErrorCode;
+import com.spring.its_here.global.advice.ItsHereException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -25,9 +26,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import org.springframework.test.util.ReflectionTestUtils;
-
 
 @ExtendWith(MockitoExtension.class)
 class CategoryServiceTest {
@@ -66,19 +64,9 @@ class CategoryServiceTest {
                     .thenReturn(category);
 
             when(categoryRepository.save(any(Category.class)))
-                    .thenAnswer(invocation -> {
-
-                        Category savedCategory =
-                                invocation.getArgument(0);
-
-                        ReflectionTestUtils.setField(
-                                savedCategory,
-                                "id",
-                                UUID.randomUUID()
-                        );
-
-                        return savedCategory;
-                    });
+                    .thenAnswer(invocation ->
+                            invocation.getArgument(0)
+                    );
 
             when(categoryMapper.toCreateResponseDto(any(Category.class)))
                     .thenAnswer(invocation -> {
@@ -126,8 +114,45 @@ class CategoryServiceTest {
             verify(categoryMapper)
                     .toCreateResponseDto(responseCaptor.capture());
 
-            assertThat(responseCaptor.getValue())
-                    .isEqualTo(savedCategory);
+            assertThat(responseCaptor.getValue().getId())
+                    .isEqualTo(savedCategory.getId());
+        }
+
+        @Test
+        @DisplayName("카테고리 생성 실패 - 중복된 name이면 예외가 발생")
+        void createCategory_duplicate_name() {
+
+            // given
+            CategoryCreateRequestDto request =
+                    new CategoryCreateRequestDto(
+                            "한식",
+                            false
+                    );
+
+            when(categoryRepository.existsByNameAndHasDeletedFalse("한식"))
+                    .thenReturn(true);
+
+            // when & then
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> categoryService.createCategory(request)
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.DUPLICATE_CATEGORY_NAME);
+
+            verify(categoryRepository)
+                    .existsByNameAndHasDeletedFalse("한식");
+
+            verify(categoryRepository, never())
+                    .save(any(Category.class));
+
+            verify(categoryMapper, never())
+                    .toEntity(any());
+
+            verify(categoryMapper, never())
+                    .toCreateResponseDto(any());
         }
 
         @Test
