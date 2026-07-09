@@ -70,7 +70,7 @@ class UserServiceTest {
                     UserRole.CUSTOMER
             );
 
-            when(userRepository.existsByUsernameAndHasDeletedFalse("testUser"))
+            when(userRepository.existsByUsername("testUser"))
                     .thenReturn(false);
 
             when(passwordEncoder.encode("Password123!"))
@@ -102,7 +102,7 @@ class UserServiceTest {
             assertThat(savedUser.getRole()).isEqualTo(UserRole.CUSTOMER);
 
             verify(passwordEncoder).encode("Password123!");
-            verify(userRepository).existsByUsernameAndHasDeletedFalse("testUser");
+            verify(userRepository).existsByUsername("testUser");
             verify(userRepository).save(any(UserEntity.class));
         }
 
@@ -117,10 +117,7 @@ class UserServiceTest {
                     UserRole.CUSTOMER
             );
 
-            when(userRepository.existsByUsernameAndHasDeletedFalse("testUser"))
-                    .thenReturn(true);
-
-            when(userRepository.existsByNicknameAndHasDeletedFalse("테스터"))
+            when(userRepository.existsByUsername("testUser"))
                     .thenReturn(true);
 
             // when
@@ -133,17 +130,9 @@ class UserServiceTest {
             assertThat(exception.getErrorCode())
                     .isEqualTo(ErrorCode.DUPLICATE_USERNAME);
 
-            verify(userRepository)
-                    .existsByUsernameAndHasDeletedFalse("testUser");
-
-            verify(userRepository)
-                    .existsByNicknameAndHasDeletedFalse("테스터");
-
-            verify(userRepository, never())
-                    .save(any(UserEntity.class));
-
-            verify(passwordEncoder, never())
-                    .encode(anyString());
+            verify(userRepository).existsByUsername("testUser");
+            verify(userRepository, never()).save(any(UserEntity.class));
+            verify(passwordEncoder, never()).encode(anyString());
         }
     }
 
