@@ -25,7 +25,17 @@ public class BaseDeletableEntity extends BaseUpdatableEntity {
         this.deletedBy = deletedBy;
     }
 
+    public void restore() {
+        if (!isDeleted()) {
+            throw new IllegalStateException("삭제되지 않은 엔티티입니다.");
+        }
+
+        this.deletedAt = null;
+        this.deletedBy = null;
+    }
+
     public boolean isDeleted() {
         return deletedAt != null;
     }
+    
 }
