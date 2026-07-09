@@ -28,7 +28,7 @@ public class OrderProduct extends BaseEntity {
     private int price;
 
     @Column(name = "quantity", nullable = false)
-    private long quantity;
+    private int quantity;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
@@ -36,7 +36,7 @@ public class OrderProduct extends BaseEntity {
 
     public static OrderProduct createSnapshot(Order order, UUID productId,
                                               String productName, int productPrice,
-                                              long quantity) {
+                                              int quantity) {
         OrderProduct op = new OrderProduct();
         op.order = order;
         op.productId = productId;
