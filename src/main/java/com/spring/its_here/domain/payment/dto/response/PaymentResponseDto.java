@@ -1,4 +1,4 @@
-package com.spring.its_here.domain.order.dto.response;
+package com.spring.its_here.domain.payment.dto.response;
 
 import com.spring.its_here.domain.payment.entity.Payment;
 import com.spring.its_here.domain.payment.enums.PaymentMethod;
@@ -7,7 +7,7 @@ import com.spring.its_here.domain.payment.enums.PaymentStatus;
 import java.time.Instant;
 import java.util.UUID;
 
-public record PaymentResponse(
+public record PaymentResponseDto(
         UUID paymentId,
         UUID orderId,
         int amount,
@@ -17,8 +17,8 @@ public record PaymentResponse(
         Instant approvedAt,
         Instant createdAt
 ) {
-    public static PaymentResponse from(Payment payment) {
-        return new PaymentResponse(
+    public static PaymentResponseDto from(Payment payment) {
+        return new PaymentResponseDto(
                 payment.getId(),
                 payment.getOrderId(),
                 payment.getAmount(),

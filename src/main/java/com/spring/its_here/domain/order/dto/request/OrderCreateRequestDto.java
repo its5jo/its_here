@@ -8,13 +8,13 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.UUID;
 
-public record OrderCreateRequest(
+public record OrderCreateRequestDto(
         @NotNull(message = "가게 ID는 필수입니다")
         UUID storeId,
 
         @NotEmpty(message = "주문 상품은 1개 이상이어야 합니다")
         @Valid
-        List<OrderProductRequest> orderProducts,
+        List<OrderProductRequestDto> orderProducts,
 
         @NotBlank(message = "배송지 입력은 필수입니다")
         String deliveryAddress,

@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotNull;
 
 import java.util.UUID;
 
-public record OrderProductRequest (
+public record OrderProductRequestDto(
 
         @NotNull(message = "상품 ID는 필수입니다")
         UUID productId,
