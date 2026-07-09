@@ -25,6 +25,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.util.UUID;
 
 @ExtendWith(MockitoExtension.class)
 class CategoryServiceTest {
@@ -63,9 +66,19 @@ class CategoryServiceTest {
                     .thenReturn(category);
 
             when(categoryRepository.save(any(Category.class)))
-                    .thenAnswer(invocation ->
-                            invocation.getArgument(0)
-                    );
+                    .thenAnswer(invocation -> {
+
+                        Category savedCategory =
+                                invocation.getArgument(0);
+
+                        ReflectionTestUtils.setField(
+                                savedCategory,
+                                "id",
+                                UUID.randomUUID()
+                        );
+
+                        return savedCategory;
+                    });
 
             when(categoryMapper.toCreateResponseDto(any(Category.class)))
                     .thenAnswer(invocation -> {
