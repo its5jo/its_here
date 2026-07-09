@@ -1,4 +1,4 @@
-package com.spring.its_here;
+package com.spring.its_here.domain.category.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -13,7 +13,6 @@ import com.spring.its_here.domain.category.dto.response.CategoryCreateResponseDt
 import com.spring.its_here.domain.category.entity.Category;
 import com.spring.its_here.domain.category.mapper.CategoryMapper;
 import com.spring.its_here.domain.category.repository.CategoryRepository;
-import com.spring.its_here.domain.category.service.CategoryService;
 
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
