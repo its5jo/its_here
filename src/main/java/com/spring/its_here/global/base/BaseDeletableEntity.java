@@ -8,7 +8,7 @@ import java.time.Instant;
 
 @Getter
 @MappedSuperclass
-public class BaseDeletableEntity {
+public class BaseDeletableEntity extends BaseUpdatableEntity {
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
@@ -17,6 +17,10 @@ public class BaseDeletableEntity {
     private Long deletedBy;
 
     public void delete(Long deletedBy) {
+        if (isDeleted()) {
+            return;
+        }
+
         this.deletedAt = Instant.now();
         this.deletedBy = deletedBy;
     }
