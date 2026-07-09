@@ -33,15 +33,14 @@ public class UserService {
 
     @Transactional
     public UserResponseDto signup(UserSignupRequestDto userSignupRequestDto) {
-        // 동일한 아이디, 닉네임 존재 확인
-        if (userRepository.existsByUsernameAndHasDeletedFalse(userSignupRequestDto.username())
-            && userRepository.existsByNicknameAndHasDeletedFalse(userSignupRequestDto.nickname())
-        ) {
+        // 동일한 아이디 존재 확인
+        if (userRepository.existsByUsername(userSignupRequestDto.username())) {
             throw new ItsHereException(ErrorCode.DUPLICATE_USERNAME);
         }
 
-        // CUSTOMER, MANAGER 제외 생성 불가능
-        if (userSignupRequestDto.role() != UserRole.CUSTOMER && userSignupRequestDto.role() != UserRole.OWNER) {
+        // CUSTOMER, OWNER만 회원가입 할 수 있음
+        if (userSignupRequestDto.role() != UserRole.CUSTOMER
+                && userSignupRequestDto.role() != UserRole.OWNER) {
             throw new ItsHereException(ErrorCode.INVALID_REQUEST);
         }
 
