@@ -18,7 +18,7 @@ public class BaseDeletableEntity extends BaseUpdatableEntity {
 
     public void delete(Long deletedBy) {
         if (isDeleted()) {
-            return;
+            throw new IllegalStateException("이미 삭제된 엔티티입니다.");
         }
 
         this.deletedAt = Instant.now();
