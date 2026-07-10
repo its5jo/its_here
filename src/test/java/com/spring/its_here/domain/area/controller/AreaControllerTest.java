@@ -2,6 +2,7 @@ package com.spring.its_here.domain.area.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spring.its_here.domain.area.service.AreaService;
+import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.config.SecurityConfig;
 import com.spring.its_here.global.security.CustomUserDetailsService;
 import com.spring.its_here.global.security.JwtProvider;
@@ -15,16 +16,16 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
 @WebMvcTest(AreaController.class)
@@ -58,13 +59,13 @@ class AreaControllerTest {
             request.put(missingField, "");
 
             mockMvc.perform(post("/api/areas")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(result ->
-                            assertInstanceOf(
-                                    MethodArgumentNotValidException.class,
-                                    result.getResolvedException()
-                            ));
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(ErrorCode.INVALID_INPUT_VALUE.getCode()))
+                    .andExpect(jsonPath("$.message").value(ErrorCode.INVALID_INPUT_VALUE.getMessage()))
+                    .andExpect(jsonPath("$.details." + missingField).exists());
+
             verifyNoMoreInteractions(areaService);
         }
     }
