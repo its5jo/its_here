@@ -1,6 +1,7 @@
 package com.spring.its_here.domain.review.entity;
 
 
+import com.spring.its_here.domain.order.entity.Order;
 import com.spring.its_here.global.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -46,13 +47,12 @@ public class Review extends BaseEntity {
     private boolean hasDeleted = false;
 
     // 임시
-    private UUID orderId;
     private UUID storeId;
     private UUID userId;
 
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "order_id", nullable = false)
-//    private Order order;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id", nullable = false)
+    private Order order;
 
     //    @ManyToOne(fetch = FetchType.LAZY)
 //    @JoinColumn(name = "store_id", nullable = false)
@@ -64,15 +64,15 @@ public class Review extends BaseEntity {
 
     public static Review create(
             double rating,
-            String content
-//            Order orderId,
+            String content,
+            Order order
 //            Store storeId,
 //            User userId
     ) {
         Review review = new Review();
         review.rating = rating;
         review.content = content;
-//        review.orderId = orderId;
+        review.order = order;
 //        review.storeId = storeId;
 //        review.userId = userId;
         return review;

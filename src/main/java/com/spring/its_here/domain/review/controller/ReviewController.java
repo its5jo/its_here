@@ -4,8 +4,8 @@ package com.spring.its_here.domain.review.controller;
 import com.spring.its_here.domain.review.dto.request.ReviewCreateRequestDto;
 import com.spring.its_here.domain.review.dto.response.ReviewCreateResponseDto;
 import com.spring.its_here.domain.review.service.ReviewService;
-import com.spring.its_here.domain.review.validator.ReviewValidator;
 import com.spring.its_here.global.response.ApiResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,10 +22,8 @@ public class ReviewController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<ReviewCreateResponseDto>> create(
-        @RequestBody ReviewCreateRequestDto reviewCreateRequestDto
-    ){
-        ReviewValidator.validateCreate(reviewCreateRequestDto);
-
+            @Valid @RequestBody ReviewCreateRequestDto reviewCreateRequestDto
+    ) {
         ReviewCreateResponseDto reviewCreateResponseDto = reviewService.create(reviewCreateRequestDto);
 
         return ResponseEntity
