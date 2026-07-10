@@ -8,9 +8,6 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.LastModifiedDate;
-
-import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -28,10 +25,6 @@ public class Review extends BaseDeletableEntity {
 
     @Column(name = "content")
     private String content;
-
-    @LastModifiedDate
-    @Column(name = "updated_at")
-    private Instant updateAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
