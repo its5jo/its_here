@@ -1,5 +1,6 @@
 package com.spring.its_here.domain.product.entity;
 
+import com.spring.its_here.domain.store.entity.Store;
 import com.spring.its_here.global.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -51,11 +52,11 @@ public class Product extends BaseEntity {
     @Column(name = "deleted_by")
     private Long deletedBy;
 
-//    @JoinColumn(name = "store_id", nullable = false)
-//    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-//    private Store store;  // TODO: Store Entity 생성되면 주석 풀어서 연관관계 설정
+    @JoinColumn(name = "store_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    private Store store;  // TODO: Store Entity 생성되면 주석 풀어서 연관관계 설정
 
-    private Product(String name, String description, boolean hasHidden, int price, String imageUrl) {
+    private Product(String name, String description, boolean hasHidden, int price, String imageUrl, Store store) {
         validateName(name);
         validatePrice(price);
         this.name = name;
@@ -63,6 +64,7 @@ public class Product extends BaseEntity {
         this.hasHidden = hasHidden;
         this.price = price;
         this.imageUrl = imageUrl;
+        this.store = store;
     }
 
     public static Product create(
@@ -70,14 +72,16 @@ public class Product extends BaseEntity {
             String description,
             boolean hasHidden,
             int price,
-            String imageUrl
+            String imageUrl,
+            Store store
     ) {
         return new Product(
                 name,
                 description,
                 hasHidden,
                 price,
-                imageUrl
+                imageUrl,
+                store
         );
     }
 
