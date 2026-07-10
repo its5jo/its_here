@@ -12,10 +12,8 @@ import com.spring.its_here.domain.store.dto.response.StoreGetOneResponseDto;
 import com.spring.its_here.domain.store.dto.response.StoreUpdateResponseDto;
 import com.spring.its_here.domain.store.entity.Store;
 import com.spring.its_here.domain.store.repository.StoreRepository;
-import com.spring.its_here.domain.user.entity.UserEntity;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
-import com.spring.its_here.global.security.AuthenticationFacade;
 import com.spring.its_here.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -33,14 +31,11 @@ public class StoreService {
     private final StoreRepository storeRepository;
     private final CategoryRepository categoryRepository;
     private final AreaRepository areaRepository;
-    private final AuthenticationFacade authenticationFacade;
 
     @PreAuthorize("hasAnyAuthority('OWNER','MANAGER','MASTER')")
     @Transactional
     public StoreCreateResponseDto createStore(
             CustomUserDetails userDetails, StoreCreateRequestDto requestDto) {
-
-        //UserEntity u1 = authenticationFacade.getCurrentUser().getUser();
 
         validateStoreCreate(userDetails, requestDto);
 
@@ -83,28 +78,28 @@ public class StoreService {
         existsDuplicateStoreName(requestDto.name());
 
         existsUsersStore(userDetails.getUserId());
+
     }
 
     private void existsDuplicateStoreName(String name) {
         if(storeRepository.existsByNameAndDeletedAtIsNull(name)){
-            throw new ItsHereException(ErrorCode.DUPLICATE_STORE_NAME);
+            throw new ItsHereException(ErrorCode.STORE_NAME_DUPLICATE);
         }
     }
 
-    // 이거는 가게 주인일 때만 검증해야하나..? 왜냐면 관리자는 여러 개의 가게를 생성할 수 있어야 맞는데(근데 문제는 1대1임)
     private void existsUsersStore(Long userId){
-        if(storeRepository.existsUserIdAndDeletedAtIsNull(userId)){
-            throw new ItsHereException(ErrorCode.USER_ALREADY_HAS_STORE);
+        if(storeRepository.existsByUserIdAndDeletedAtIsNull(userId)){
+            throw new ItsHereException(ErrorCode.STORE_ALREADY_REGISTERED);
         }
     }
 
     private Category findCategoryOrThrow(UUID categoryId){
-        return categoryRepository.findByIdAndHasDeletedFalse(categoryId)
+        return categoryRepository.findByIdAndDeletedAtIsNull(categoryId)
                 .orElseThrow(() -> new ItsHereException(ErrorCode.CATEGORY_NOT_FOUND));
     }
 
     private Area findAreaOrThrow(UUID areaId){
-        return areaRepository.findByIdAndHasDeletedFalse(areaId)
+        return areaRepository.findByIdAndDeletedAtIsNull(areaId)
                 .orElseThrow(() -> new ItsHereException(ErrorCode.AREA_NOT_FOUND));
     }
 }
