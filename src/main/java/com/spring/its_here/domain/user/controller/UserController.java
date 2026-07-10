@@ -1,5 +1,6 @@
 package com.spring.its_here.domain.user.controller;
 
+import com.spring.its_here.domain.user.dto.request.UserCreateRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserSignupRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserLoginRequestDto;
 import com.spring.its_here.domain.user.dto.response.TokenPairDto;
@@ -127,6 +128,22 @@ public class UserController {
                 .body(ApiResponse.success(
                         "내 정보 조회 성공",
                         userService.getSelf()
+                ));
+    }
+
+    @Operation(
+            summary = "사용자 생성",
+            description = "MASTER 권한이 있는 사용자가 MANAGER 권한의 사용자를 생성합니다."
+    )
+    @PostMapping
+    public ResponseEntity<ApiResponse<UserResponseDto>> createUser(
+            @Valid @RequestBody UserCreateRequestDto userCreateRequestDto
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        "사용자 생성 성공",
+                        userService.create(userCreateRequestDto)
                 ));
     }
 }

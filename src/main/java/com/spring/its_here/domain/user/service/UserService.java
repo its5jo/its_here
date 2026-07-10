@@ -1,5 +1,6 @@
 package com.spring.its_here.domain.user.service;
 
+import com.spring.its_here.domain.user.dto.request.UserCreateRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserSignupRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserLoginRequestDto;
 import com.spring.its_here.domain.user.dto.response.TokenPairDto;
@@ -31,12 +32,29 @@ public class UserService {
     private final JwtProvider jwtProvider;
     private final AuthenticationFacade authenticationFacade;
 
+    // 동일 아이디 존재 확인 로직
+    private void existsByUsername(String username) {
+        if (userRepository.existsByUsername(username)) {
+            throw new ItsHereException(ErrorCode.DUPLICATE_USERNAME);
+        }
+    }
+
+    // 인증된 user 객체 조회 및 반환
+    private UserEntity getCurrentUser() {
+        // SecurityContext에 저장된 현재 로그인 사용자의 PK를 조회
+        Long userId = authenticationFacade.getCurrentUserId();
+
+        // PK를 이용하여 최신 사용자 정보를 조회
+        return userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new ItsHereException(ErrorCode.USER_NOT_FOUND)
+                );
+    }
+
     @Transactional
     public UserResponseDto signup(UserSignupRequestDto userSignupRequestDto) {
         // 동일한 아이디 존재 확인
-        if (userRepository.existsByUsername(userSignupRequestDto.username())) {
-            throw new ItsHereException(ErrorCode.DUPLICATE_USERNAME);
-        }
+        existsByUsername(userSignupRequestDto.username());
 
         // CUSTOMER, OWNER만 회원가입 할 수 있음
         if (userSignupRequestDto.role() != UserRole.CUSTOMER
@@ -123,14 +141,7 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public UserSelfGetResponseDto getSelf() {
-        // SecurityContext에 저장된 현재 로그인 사용자의 PK를 조회
-        Long userId = authenticationFacade.getCurrentUserId();
-
-        // PK를 이용하여 최신 사용자 정보를 조회
-        UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new ItsHereException(ErrorCode.USER_NOT_FOUND)
-                );
+        UserEntity user = getCurrentUser();
 
         // 최신 사용자 정보를 응답 DTO로 변환하여 반환
         return new UserSelfGetResponseDto(
@@ -138,5 +149,31 @@ public class UserService {
                 user.getNickname(),
                 user.getRole()
         );
+    }
+
+    @Transactional
+    public UserResponseDto create(UserCreateRequestDto userCreateRequestDto) {
+        // 동일 아이디 존재 확인
+        existsByUsername(userCreateRequestDto.username());
+
+        // 현재 인증된 사용자
+        UserEntity user = getCurrentUser();
+
+        if (user.getRole() != UserRole.MASTER) {
+            throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
+        }
+
+        String encodedPassword = passwordEncoder.encode(userCreateRequestDto.password());
+
+        UserEntity newManager = UserEntity.create(
+                userCreateRequestDto.username(),
+                encodedPassword,
+                userCreateRequestDto.nickname(),
+                UserRole.MANAGER
+        );
+
+        userRepository.save(newManager);
+
+        return new UserResponseDto(newManager.getId());
     }
 }
