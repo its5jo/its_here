@@ -21,4 +21,7 @@ public class BaseEntity {
     @Column(name = "created_by", updatable = false)
     private Long createdBy;
 
+    public void assignCreatedBy(Long createdBy) {
+        this.createdBy = createdBy;
+    }
 }
