@@ -126,15 +126,6 @@ class ReviewServiceTest {
         );
     }
 
-    /*
-     사용자 조회
-    → 주문 조회
-    → 가게 조회
-    → 본인 주문 확인
-    → 주문 완료 확인
-    → 중복 리뷰 확인
-    */
-
     @Nested
     @DisplayName("리뷰 생성")
     class CreateReview {
