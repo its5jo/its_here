@@ -44,9 +44,6 @@ public class Store extends BaseDeletableEntity {
     @Column(name = "review_total_count" ,nullable = false)
     private Long reviewTotalCount;
 
-    @Column(name = "has_deleted", nullable = false)
-    private Boolean hasDeleted;
-
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false, updatable = false)
     private UserEntity user;
@@ -76,7 +73,6 @@ public class Store extends BaseDeletableEntity {
         store.closeAt = closeAt;
         store.reviewTotalRating = 0D;
         store.reviewTotalCount = 0L;
-        store.hasDeleted = false;
 
         return store;
     }

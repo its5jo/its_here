@@ -5,5 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.UUID;
 
 public interface StoreRepository extends JpaRepository<Store, UUID>, StoreRepositoryCustom {
+    boolean existsByNameAndDeletedAtIsNull(String name);
 
+    //boolean findByUserIdAndDeletedAtIsNull(Long userId);
+
+    boolean existsUserIdAndDeletedAtIsNull(Long userId);
 }
