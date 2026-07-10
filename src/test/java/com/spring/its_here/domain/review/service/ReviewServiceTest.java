@@ -1,5 +1,6 @@
 package com.spring.its_here.domain.review.service;
 
+import com.spring.its_here.domain.category.entity.Category;
 import com.spring.its_here.domain.order.entity.Order;
 import com.spring.its_here.domain.order.enums.OrderStatus;
 import com.spring.its_here.domain.order.repository.OrderRepository;
@@ -7,6 +8,7 @@ import com.spring.its_here.domain.review.dto.request.ReviewCreateRequestDto;
 import com.spring.its_here.domain.review.dto.response.ReviewCreateResponseDto;
 import com.spring.its_here.domain.review.entity.Review;
 import com.spring.its_here.domain.review.repository.ReviewRepository;
+import com.spring.its_here.domain.store.entity.Store;
 import com.spring.its_here.domain.user.entity.UserEntity;
 import com.spring.its_here.domain.user.enums.UserRole;
 import com.spring.its_here.domain.user.repository.UserRepository;
@@ -103,6 +105,14 @@ class ReviewServiceTest {
                     "nickname",
                     UserRole.CUSTOMER
             );
+//            Category category = new Category("한식", false);
+//            Store store = Store.createStore(
+//                    "name",
+//                    "address",
+//                    user,
+//                    category,
+//
+//            );
             ReflectionTestUtils.setField(user, "id", userId);
 
             given(authenticationFacade.getCurrentUserId()).willReturn(userId);

@@ -8,6 +8,8 @@ import com.spring.its_here.domain.review.dto.request.ReviewCreateRequestDto;
 import com.spring.its_here.domain.review.dto.response.ReviewCreateResponseDto;
 import com.spring.its_here.domain.review.entity.Review;
 import com.spring.its_here.domain.review.repository.ReviewRepository;
+import com.spring.its_here.domain.store.entity.Store;
+import com.spring.its_here.domain.store.repository.StoreRepository;
 import com.spring.its_here.domain.user.entity.UserEntity;
 import com.spring.its_here.domain.user.repository.UserRepository;
 import com.spring.its_here.global.advice.ErrorCode;
@@ -25,6 +27,8 @@ public class ReviewService {
     private final OrderRepository orderRepository;
     private final AuthenticationFacade authenticationFacade;
     private final UserRepository userRepository;
+    private final StoreRepository storeRepository;
+
 
     @PreAuthorize("hasAuthority('CUSTOMER')")
     @Transactional
@@ -36,6 +40,8 @@ public class ReviewService {
 
         Order order = orderRepository.findById(reviewCreateRequestDto.orderId())
                 .orElseThrow(() -> new ItsHereException(ErrorCode.ORDER_NOT_FOUND));
+        Store store= storeRepository.findById(order.getStoreId())
+                .orElseThrow(()-> new ItsHereException(ErrorCode.STORE_NOT_FOUND));
 
         if (!order.getUserId().equals(user.getId())) {
             throw new ItsHereException(ErrorCode.REVIEW_FORBIDDEN);
@@ -54,6 +60,7 @@ public class ReviewService {
                 reviewCreateRequestDto.content(),
                 order,
                 user
+//                store
         );
 
         Review reviewSave = reviewRepository.save(reviewCreate);

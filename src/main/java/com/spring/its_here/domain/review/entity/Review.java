@@ -2,12 +2,14 @@ package com.spring.its_here.domain.review.entity;
 
 
 import com.spring.its_here.domain.order.entity.Order;
+import com.spring.its_here.domain.store.entity.Store;
 import com.spring.its_here.domain.user.entity.UserEntity;
 import com.spring.its_here.global.base.BaseDeletableEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
 import java.util.UUID;
 
 @Getter
@@ -30,9 +32,9 @@ public class Review extends BaseDeletableEntity {
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
 
-    //    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "store_id", nullable = false)
-//    private Store store;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id", nullable = false)
+    private Store store;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

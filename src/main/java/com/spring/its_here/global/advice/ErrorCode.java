@@ -25,7 +25,9 @@ public enum ErrorCode {
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 주문입니다.", "O-001"),
     REVIEW_FORBIDDEN(HttpStatus.NOT_FOUND, "리뷰작성 권한이 없습니다.", "R-001"),
     REVIEW_ORDER_NOT_COMPLETED(HttpStatus.NOT_FOUND, "완료된 주문에만 리뷰를 작성할 수 있습니다.", "R-003"),
-    REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 존재하는 리뷰입니다.", "R-004");
+    REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 존재하는 리뷰입니다.", "R-004"),
+    STORE_NOT_FOUND(HttpStatus.NOT_FOUND, "가게가 존재하지 않습니다.", "S-001"),
+    ;
 
     private final String message;
     private final HttpStatus status;
