@@ -6,8 +6,6 @@ import org.springframework.http.HttpStatus;
 
 @Getter
 public enum ErrorCode {
-    EMPTY_FILE(HttpStatus.BAD_REQUEST, "파일이 비어 있습니다.", "CM-001"),
-    FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드에 실패했습니다.", "CM-002"),
     // common
 //    INVALID_REQUEST(HttpStatus.BAD_REQUEST, "요청이 올바르지 않습니다.", "CM-001"), // TODO: errorCode 컨벤션 정립후 추가
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다.", "CM-002"),
@@ -15,6 +13,8 @@ public enum ErrorCode {
     INVALID_STATE(HttpStatus.CONFLICT, "요청을 처리할 수 없는 상태입니다.", "CM-004"),
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "요청값이 올바르지 않습니다.", "CM-005"),
     UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 미디어 타입입니다.", "CM-006"),
+    EMPTY_FILE(HttpStatus.BAD_REQUEST, "파일이 비어 있습니다.", "CM-007"),
+    FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드에 실패했습니다.", "CM-008"),
 
     AUTH_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 올바르지 않습니다.", "U-001"),
     AUTH_FORBIDDEN(HttpStatus.FORBIDDEN, "접근 권한이 없습니다.", "U-005"), // TODO: 컨벤션 정립후 code 위치 또는 code 번호 수정
