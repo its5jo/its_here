@@ -36,10 +36,7 @@ public class Area extends BaseDeletableEntity {
     private String town;
 
     @Column(name = "has_available", nullable = false)
-    private boolean hasAvailable;
-
-    @Column(name = "has_deleted", nullable = false)
-    private boolean hasDeleted = false;
+    private boolean hasAvailable = false;
 
     public static Area create(
             String city,
