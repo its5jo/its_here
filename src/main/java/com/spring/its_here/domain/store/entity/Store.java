@@ -35,8 +35,8 @@ public class Store extends BaseDeletableEntity {
     @Column(name = "open_at")
     private LocalTime openAt;
 
-    @Column(name = "close_at")
-    private LocalTime closeAt;
+    @Column(name = "closed_at")
+    private LocalTime closedAt;
 
     @Column(name = "review_total_rating", nullable = false)
     private Double reviewTotalRating;
@@ -59,7 +59,7 @@ public class Store extends BaseDeletableEntity {
     public static Store createStore(
             String name, String address,
             UserEntity user, Category category, Area area,
-            boolean hasOpen, LocalTime openAt, LocalTime closeAt
+            boolean hasOpen, LocalTime openAt, LocalTime closedAt
     ) {
         Store store = new Store();
 
@@ -70,7 +70,7 @@ public class Store extends BaseDeletableEntity {
         store.area = area;
         store.hasOpen = hasOpen;
         store.openAt = openAt;
-        store.closeAt = closeAt;
+        store.closedAt = closedAt;
         store.reviewTotalRating = 0D;
         store.reviewTotalCount = 0L;
 
