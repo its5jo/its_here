@@ -1,5 +1,6 @@
 package com.spring.its_here.domain.review.service;
 
+import com.spring.its_here.domain.area.entity.Area;
 import com.spring.its_here.domain.category.entity.Category;
 import com.spring.its_here.domain.order.entity.Order;
 import com.spring.its_here.domain.order.enums.OrderStatus;
@@ -9,11 +10,12 @@ import com.spring.its_here.domain.review.dto.response.ReviewCreateResponseDto;
 import com.spring.its_here.domain.review.entity.Review;
 import com.spring.its_here.domain.review.repository.ReviewRepository;
 import com.spring.its_here.domain.store.entity.Store;
+import com.spring.its_here.domain.store.repository.StoreRepository;
 import com.spring.its_here.domain.user.entity.UserEntity;
 import com.spring.its_here.domain.user.enums.UserRole;
-import com.spring.its_here.domain.user.repository.UserRepository;
+import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
-import com.spring.its_here.global.security.AuthenticationFacade;
+import com.spring.its_here.global.security.CustomUserDetails;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -48,15 +50,12 @@ class ReviewServiceTest {
     ReviewRepository reviewRepository;
 
     @Mock
+    StoreRepository storeRepository;
+
+    @Mock
     OrderRepository orderRepository;
 
-    @Mock
-    UserRepository userRepository;
-
-    @Mock
-    AuthenticationFacade authenticationFacade;
-
-    private UserEntity createUser(Long id) {
+    private UserEntity createTestUser(Long id) {
         UserEntity user = UserEntity.create(
                 "kim123",
                 "password",
@@ -69,7 +68,10 @@ class ReviewServiceTest {
         return user;
     }
 
-    private Order createOrder(Long ownerId, OrderStatus status) {
+    private Order createTestOrder(
+            Long ownerId,
+            OrderStatus status
+    ) {
         Order order = Order.create(
                 storeId,
                 ownerId,
@@ -84,7 +86,39 @@ class ReviewServiceTest {
         return order;
     }
 
-    private ReviewCreateRequestDto createRequest() {
+    private Store createTestStore(UserEntity user) {
+        Area area = Area.create(
+                "city",
+                "district",
+                "town"
+        );
+        Category category = new Category(
+                "한식이젤루좋아",
+                false
+        );
+        Store store = Store.createStore(
+                "name",
+                "address",
+                user,
+                category,
+                area,
+                true,
+                null,
+                null
+        );
+        ReflectionTestUtils.setField(store, "id", storeId);
+
+        return store;
+    }
+
+    private CustomUserDetails createUserDetails(UserEntity user) {
+        CustomUserDetails customUserDetails = mock(CustomUserDetails.class);
+        given(customUserDetails.getUserEntity()).willReturn(user);
+
+        return customUserDetails;
+    }
+
+    private ReviewCreateRequestDto createTestRequest() {
         return new ReviewCreateRequestDto(
                 orderId,
                 3.0,
@@ -92,56 +126,47 @@ class ReviewServiceTest {
         );
     }
 
+    /*
+     사용자 조회
+    → 주문 조회
+    → 가게 조회
+    → 본인 주문 확인
+    → 주문 완료 확인
+    → 중복 리뷰 확인
+    */
+
     @Nested
     @DisplayName("리뷰 생성")
-    class ReviewCreateTest {
+    class CreateReview {
         @Test
         @DisplayName("성공")
-        void create() {
-            Order order = mock(Order.class);
-            UserEntity user = UserEntity.create(
-                    "username",
-                    "password",
-                    "nickname",
-                    UserRole.CUSTOMER
+        void success() {
+            UserEntity user = createTestUser(userId);
+            CustomUserDetails customUserDetails = createUserDetails(user);
+            Store store = createTestStore(user);
+            Order order = createTestOrder(
+                    userId,
+                    OrderStatus.COMPLETED
             );
-//            Category category = new Category("한식", false);
-//            Store store = Store.createStore(
-//                    "name",
-//                    "address",
-//                    user,
-//                    category,
-//
-//            );
-            ReflectionTestUtils.setField(user, "id", userId);
+            ReviewCreateRequestDto request = createTestRequest();
 
-            given(authenticationFacade.getCurrentUserId()).willReturn(userId);
-            given(userRepository.findById(userId)).willReturn(Optional.of(user));
+
             given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
-
-            given(order.getId()).willReturn(orderId);
-            given(order.getUserId()).willReturn(userId);
-            given(order.getStoreId()).willReturn(storeId);
-            given(order.getStatus()).willReturn(OrderStatus.COMPLETED);
-
-            Review reviewSave = Review.create(
+            given(reviewRepository.existsByOrderId(orderId)).willReturn(false);
+            given(storeRepository.findById(storeId)).willReturn(Optional.of(store));
+            Review savedReview = Review.savedReview(
                     3.0,
                     "content",
-                    order,
-                    user
+                    user,
+                    store,
+                    order
             );
 
-            ReflectionTestUtils.setField(reviewSave, "id", reviewId);
+            ReflectionTestUtils.setField(savedReview, "id", reviewId);
+            given(reviewRepository.save(any(Review.class)))
+                    .willReturn(savedReview);
 
-            given(reviewRepository.save(any(Review.class))).willReturn(reviewSave);
-
-            ReviewCreateRequestDto request = new ReviewCreateRequestDto(
-                    orderId,
-                    3.0,
-                    "content"
-            );
-
-            ReviewCreateResponseDto response = reviewService.create(request);
+            ReviewCreateResponseDto response = reviewService.createReview(request, customUserDetails);
 
             assertThat(response).isNotNull();
             assertThat(response.reviewId()).isEqualTo(reviewId);
@@ -149,86 +174,146 @@ class ReviewServiceTest {
             assertThat(response.storeId()).isEqualTo(storeId);
             assertThat(response.userId()).isEqualTo(userId);
 
+            verify(customUserDetails).getUserEntity();
+            verify(orderRepository).findById(orderId);
+            verify(reviewRepository).existsByOrderId(orderId);
+            verify(storeRepository).findById(storeId);
             verify(reviewRepository).save(any(Review.class));
         }
 
         @Test
         @DisplayName("주문 완료 상태 아닌 경우 예외")
         void order_not_completed() {
-            UserEntity user = createUser(userId);
-            Order order = createOrder(userId, OrderStatus.REQUESTED);
+            UserEntity user = createTestUser(userId);
+            CustomUserDetails userDetails = createUserDetails(user);
 
-            ReviewCreateRequestDto reviewCreateRequestDto = createRequest();
+            Order order = createTestOrder(
+                    userId,
+                    OrderStatus.REQUESTED
+            );
 
-            given(authenticationFacade.getCurrentUserId()).willReturn(userId);
-            given(userRepository.findById(userId)).willReturn(Optional.of(user));
-            given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
+            ReviewCreateRequestDto request = createTestRequest();
 
-            assertThatThrownBy(() -> reviewService.create(reviewCreateRequestDto))
-                    .isInstanceOf(ItsHereException.class);
+            given(orderRepository.findById(orderId))
+                    .willReturn(Optional.of(order));
 
-            verify(reviewRepository, never()).existsByOrder_Id(any());
-            verify(reviewRepository, never()).save(any(Review.class));
+            assertThatThrownBy(
+                    () -> reviewService.createReview(request, userDetails))
+                    .isInstanceOfSatisfying(
+                            ItsHereException.class,
+                            exception -> assertThat(exception.getErrorCode())
+                                    .isEqualTo(ErrorCode.REVIEW_ORDER_NOT_COMPLETED)
+                    );
+
+            verify(reviewRepository, never()).existsByOrderId(any());
+            verify(storeRepository, never()).findById(any());
+            verify(reviewRepository, never()).save(any());
         }
 
         @Test
-        @DisplayName("존재하지 않는 주문인 경우 예외")
+        @DisplayName("주문이 존재하지 않으면 예외")
         void order_not_found() {
-            UserEntity user = createUser(userId);
-            ReviewCreateRequestDto reviewCreateRequestDto = createRequest();
+            UserEntity user = createTestUser(userId);
+            CustomUserDetails userDetails = createUserDetails(user);
+            ReviewCreateRequestDto request = createTestRequest();
 
-            given(authenticationFacade.getCurrentUserId()).willReturn(userId);
-            given(userRepository.findById(userId)).willReturn(Optional.of(user));
             given(orderRepository.findById(orderId)).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> reviewService.create(reviewCreateRequestDto))
-                    .isInstanceOf(ItsHereException.class);
+            assertThatThrownBy(
+                    () -> reviewService.createReview(request, userDetails))
+                    .isInstanceOfSatisfying(
+                            ItsHereException.class,
+                            exception -> assertThat(exception.getErrorCode())
+                                    .isEqualTo(ErrorCode.ORDER_NOT_FOUND)
+                    );
 
-            verify(reviewRepository, never()).existsByOrder_Id(any());
-            verify(reviewRepository, never()).save(any(Review.class));
+            verify(reviewRepository, never()).existsByOrderId(any());
+            verify(storeRepository, never()).findById(any());
+            verify(reviewRepository, never()).save(any());
         }
 
         @Test
-        @DisplayName("본인의 주문이 아닌 경우")
+        @DisplayName("본인의 주문이 아니면 예외")
         void review_forbidden() {
-            Long anotherUserId = 2L;
+            UserEntity user = createTestUser(userId);
+            CustomUserDetails userDetails = createUserDetails(user);
 
-            UserEntity user = createUser(userId);
-            Order order = createOrder(
-                    anotherUserId,
+            Order order = createTestOrder(
+                    2L,
                     OrderStatus.COMPLETED
             );
 
-            ReviewCreateRequestDto reviewCreateRequestDto = createRequest();
+            ReviewCreateRequestDto request = createTestRequest();
 
-            given(authenticationFacade.getCurrentUserId()).willReturn(userId);
-            given(userRepository.findById(userId)).willReturn(Optional.of(user));
             given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
 
-            assertThatThrownBy(() -> reviewService.create(reviewCreateRequestDto))
-                    .isInstanceOf(ItsHereException.class);
+            assertThatThrownBy(
+                    () -> reviewService.createReview(request, userDetails))
+                    .isInstanceOfSatisfying(
+                            ItsHereException.class,
+                            exception -> assertThat(exception.getErrorCode())
+                                    .isEqualTo(ErrorCode.REVIEW_FORBIDDEN)
+                    );
 
-            verify(reviewRepository, never()).existsByOrder_Id(any());
-
-            verify(reviewRepository, never()).save(any(Review.class));
+            verify(reviewRepository, never()).existsByOrderId(any());
+            verify(storeRepository, never()).findById(any());
+            verify(reviewRepository, never()).save(any());
         }
 
         @Test
-        @DisplayName("이미 존재하는 리뷰인 경우 예외")
+        @DisplayName("주문에 이미 리뷰가 존재하면 예외")
         void review_already_exists() {
-            UserEntity user = createUser(userId);
-            Order order = createOrder(userId, OrderStatus.COMPLETED);
+            UserEntity user = createTestUser(userId);
+            CustomUserDetails userDetails = createUserDetails(user);
 
-            ReviewCreateRequestDto reviewCreateRequestDto = createRequest();
-            given(authenticationFacade.getCurrentUserId()).willReturn(userId);
-            given(userRepository.findById(userId)).willReturn(Optional.of(user));
+            Order order = createTestOrder(
+                    userId,
+                    OrderStatus.COMPLETED
+            );
+
+            ReviewCreateRequestDto request = createTestRequest();
+
             given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
-            given(reviewRepository.existsByOrder_Id(orderId)).willReturn(true);
+            given(reviewRepository.existsByOrderId(orderId)).willReturn(true);
 
-            assertThatThrownBy(() -> reviewService.create(reviewCreateRequestDto))
-                    .isInstanceOf(ItsHereException.class);
+            assertThatThrownBy(
+                    () -> reviewService.createReview(request, userDetails))
+                    .isInstanceOfSatisfying(
+                            ItsHereException.class,
+                            exception -> assertThat(exception.getErrorCode())
+                                    .isEqualTo(ErrorCode.REVIEW_ALREADY_EXISTS)
+                    );
 
-            verify(reviewRepository, never()).save(any(Review.class));
+            verify(storeRepository, never()).findById(any());
+            verify(reviewRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("가게가 존재하지 않으면 예외")
+        void store_not_found() {
+            UserEntity user = createTestUser(userId);
+            CustomUserDetails userDetails = createUserDetails(user);
+
+            Order order = createTestOrder(
+                    userId,
+                    OrderStatus.COMPLETED
+            );
+
+            ReviewCreateRequestDto request = createTestRequest();
+
+            given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
+            given(reviewRepository.existsByOrderId(orderId)).willReturn(false);
+            given(storeRepository.findById(storeId)).willReturn(Optional.empty());
+
+            assertThatThrownBy(
+                    () -> reviewService.createReview(request, userDetails))
+                    .isInstanceOfSatisfying(
+                            ItsHereException.class,
+                            exception -> assertThat(exception.getErrorCode())
+                                    .isEqualTo(ErrorCode.STORE_NOT_FOUND)
+                    );
+
+            verify(reviewRepository, never()).save(any());
         }
     }
 }

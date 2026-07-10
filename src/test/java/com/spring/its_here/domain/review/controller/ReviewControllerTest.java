@@ -4,55 +4,54 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spring.its_here.domain.review.dto.request.ReviewCreateRequestDto;
 import com.spring.its_here.domain.review.dto.response.ReviewCreateResponseDto;
 import com.spring.its_here.domain.review.service.ReviewService;
-import com.spring.its_here.global.advice.GlobalExceptionHandler;
-import org.junit.jupiter.api.BeforeEach;
+import com.spring.its_here.global.config.SecurityConfig;
+import com.spring.its_here.global.security.CustomUserDetails;
+import com.spring.its_here.global.security.CustomUserDetailsService;
+import com.spring.its_here.global.security.JwtProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
 
-
-@ExtendWith(MockitoExtension.class)
+@WebMvcTest(ReviewController.class)
+@Import(SecurityConfig.class)
 class ReviewControllerTest {
     UUID reviewId = UUID.randomUUID();
     UUID orderId = UUID.randomUUID();
     UUID storeId = UUID.randomUUID();
     Long userId = 1L;
 
-    @InjectMocks
-    ReviewController reviewController;
-
-    @Mock
+    @MockitoBean
     ReviewService reviewService;
 
-    MockMvc mockMvc;
-    ObjectMapper objectMapper;
+    @MockitoBean
+    JwtProvider jwtProvider;
 
-    @BeforeEach
-    void setUp() {
-        mockMvc = standaloneSetup(reviewController)
-                .setControllerAdvice(new GlobalExceptionHandler())
-                .build();
-        objectMapper = new ObjectMapper();
-    }
+    @MockitoBean
+    CustomUserDetailsService customUserDetailsService;
+
+    @Autowired
+    MockMvc mockMvc;
+
+    @Autowired
+    ObjectMapper objectMapper;
 
     @Nested
     @DisplayName("리뷰 생성")
@@ -60,6 +59,8 @@ class ReviewControllerTest {
         @Test
         @DisplayName("성공")
         void create() throws Exception {
+            CustomUserDetails customUserDetails = mock(CustomUserDetails.class);
+
             ReviewCreateRequestDto reviewCreateRequestDto = new ReviewCreateRequestDto(
                     orderId,
                     3.0,
@@ -71,10 +72,11 @@ class ReviewControllerTest {
                     storeId,
                     userId
             );
-            given(reviewService.create(any(ReviewCreateRequestDto.class))).willReturn(reviewCreateResponseDto);
+            given(reviewService.createReview(any(ReviewCreateRequestDto.class), eq(customUserDetails))).willReturn(reviewCreateResponseDto);
 
             mockMvc.perform(
                             post("/api/reviews")
+                                    .with(user(customUserDetails))
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(reviewCreateRequestDto)))
                     .andExpect(status().isCreated())
@@ -97,43 +99,37 @@ class ReviewControllerTest {
         })
         @DisplayName("유효하지 않은 평점")
         void invalid_rating(double rating) throws Exception {
-            MockMvc validationMockMvc = standaloneSetup(reviewController).build();
-
             ReviewCreateRequestDto reviewCreateRequestDto = new ReviewCreateRequestDto(
                     orderId,
                     rating,
                     "content"
             );
-
-            validationMockMvc.perform(
+            mockMvc.perform(
                             post("/api/reviews")
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(reviewCreateRequestDto))
                     )
                     .andExpect(status().isBadRequest());
 
-            verify(reviewService, never()).create(any(ReviewCreateRequestDto.class));
+            verify(reviewService, never()).createReview(any(ReviewCreateRequestDto.class), any(CustomUserDetails.class));
         }
 
         @Test
-        @DisplayName("리뷰 내용 255자 초과")
+        @DisplayName("리뷰 내용 255자 초과 예외")
         void content_too_long() throws Exception {
-            MockMvc validationMockMvc = standaloneSetup(reviewController).build();
-
             ReviewCreateRequestDto request = new ReviewCreateRequestDto(
                     orderId,
                     3.0,
                     "a".repeat(256)
             );
-
-            validationMockMvc.perform(
+            mockMvc.perform(
                             post("/api/reviews")
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(request))
                     )
                     .andExpect(status().isBadRequest());
 
-            verify(reviewService, never()).create(any(ReviewCreateRequestDto.class));
+            verify(reviewService, never()).createReview(any(ReviewCreateRequestDto.class), any(CustomUserDetails.class));
         }
     }
 }

@@ -40,19 +40,19 @@ public class Review extends BaseDeletableEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private UserEntity user;
 
-    public static Review create(
+    public static Review savedReview(
             double rating,
             String content,
-            Order order,
-//            Store store,
-            UserEntity user
+            UserEntity user,
+            Store store,
+            Order order
     ) {
         Review review = new Review();
         review.rating = rating;
         review.content = content;
-        review.order = order;
-//        review.store = store;
         review.user = user;
+        review.store = store;
+        review.order = order;
         return review;
     }
 }
