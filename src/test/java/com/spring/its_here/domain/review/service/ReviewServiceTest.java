@@ -92,7 +92,7 @@ class ReviewServiceTest {
                 "district",
                 "town"
         );
-        Category category = new Category(
+        Category category = Category.createCategory(
                 "한식이젤루좋아",
                 false
         );
@@ -141,7 +141,6 @@ class ReviewServiceTest {
             );
             ReviewCreateRequestDto request = createTestRequest();
 
-
             given(orderRepository.findById(orderId)).willReturn(Optional.of(order));
             given(reviewRepository.existsByOrderId(orderId)).willReturn(false);
             given(storeRepository.findById(storeId)).willReturn(Optional.of(store));
@@ -164,6 +163,8 @@ class ReviewServiceTest {
             assertThat(response.orderId()).isEqualTo(orderId);
             assertThat(response.storeId()).isEqualTo(storeId);
             assertThat(response.userId()).isEqualTo(userId);
+            assertThat(store.getReviewTotalRating()).isEqualTo(3.0);
+            assertThat(store.getReviewTotalCount()).isEqualTo(1L);
 
             verify(customUserDetails).getUserEntity();
             verify(orderRepository).findById(orderId);

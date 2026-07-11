@@ -61,6 +61,7 @@ public class ReviewService {
         );
 
         Review reviewSave = reviewRepository.save(reviewCreate);
+        store.accumulateReview(reviewCreateRequestDto.rating());
 
         return new ReviewCreateResponseDto(
                 reviewSave.getId(),
