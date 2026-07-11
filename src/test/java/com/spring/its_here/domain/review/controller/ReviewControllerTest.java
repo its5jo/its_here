@@ -90,10 +90,12 @@ class ReviewControllerTest {
 
         @ParameterizedTest
         @ValueSource(doubles = {
-                Double.NaN,
                 0.5,
                 0.0,
                 -1.0,
+                1.5,
+                2.5,
+                4.5,
                 5.1,
                 100.0
         })
@@ -104,11 +106,11 @@ class ReviewControllerTest {
                     rating,
                     "content"
             );
+
             mockMvc.perform(
                             post("/api/reviews")
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content(objectMapper.writeValueAsString(reviewCreateRequestDto))
-                    )
+                                    .content(objectMapper.writeValueAsString(reviewCreateRequestDto)))
                     .andExpect(status().isBadRequest());
 
             verify(reviewService, never()).createReview(any(ReviewCreateRequestDto.class), any(CustomUserDetails.class));

@@ -17,6 +17,11 @@ public record ReviewCreateRequestDto(
                 value = 5,
                 message = "평점은 5점 이하여야 합니다."
         )
+        @Digits(
+                integer = 1,
+                fraction = 0,
+                message = "평점은 정수만 입력할 수 있습니다."
+        )
         Double rating,
 
         @Size(
