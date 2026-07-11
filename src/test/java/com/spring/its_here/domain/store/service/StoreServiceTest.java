@@ -86,7 +86,7 @@ class StoreServiceTest {
                     new CustomUserDetails(user);
 
             // 모든 검증을 통과한다고 가정
-            when(storeRepository.existsByNameAndDeletedAtIsNull("교촌치킨 역삼점"))
+            when(storeRepository.existsByNameAndDeletedAtIsNull(requestDto.name()))
                     .thenReturn(false);
 
             when(storeRepository.existsByUserIdAndDeletedAtIsNull(user.getId()))
@@ -94,8 +94,6 @@ class StoreServiceTest {
 
             Category category =
                     Category.createCategory("야식", false);
-
-            category.assignCreatedBy(userDetails.getUserId());
 
             when(categoryRepository.findByIdAndDeletedAtIsNull(categoryId))
                     .thenReturn(Optional.of(category));
