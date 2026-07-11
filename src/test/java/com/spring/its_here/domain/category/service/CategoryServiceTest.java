@@ -11,11 +11,14 @@ import static org.mockito.Mockito.when;
 import com.spring.its_here.domain.category.dto.request.CategoryCreateRequestDto;
 import com.spring.its_here.domain.category.dto.response.CategoryCreateResponseDto;
 import com.spring.its_here.domain.category.entity.Category;
-import com.spring.its_here.domain.category.mapper.CategoryMapper;
 import com.spring.its_here.domain.category.repository.CategoryRepository;
 
+import com.spring.its_here.domain.user.entity.UserEntity;
+import com.spring.its_here.domain.user.enums.UserRole;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
+import com.spring.its_here.global.security.CustomUserDetails;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -35,15 +38,29 @@ class CategoryServiceTest {
     @Mock
     private CategoryRepository categoryRepository;
 
-    @Mock
-    private CategoryMapper categoryMapper;
-
     @InjectMocks
     private CategoryService categoryService;
+
+    private UserEntity user;
+    private CustomUserDetails userDetails;
 
     @Nested
     @DisplayName("카테고리 생성 API 테스트")
     class CreateCategoryTest {
+
+        @BeforeEach
+        void setUp() {
+            user = UserEntity.create(
+                    "test1",
+                    "password",
+                    "닉네임",
+                    UserRole.OWNER
+            );
+
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            userDetails = new CustomUserDetails(user);
+        }
 
         @Test
         @DisplayName("카테고리 생성 성공")
@@ -56,75 +73,36 @@ class CategoryServiceTest {
                             false
                     );
 
-            Category category =
-                    Category.createCategory(request.name(), request.hasHidden());
+            UUID categoryId = UUID.randomUUID();
 
-            when(categoryMapper.toEntity(request))
-                    .thenReturn(category);
-
+            // save()가 호출되면 ID를 넣어서 반환
             when(categoryRepository.save(any(Category.class)))
                     .thenAnswer(invocation -> {
-
-                        Category savedCategory =
-                                invocation.getArgument(0);
-
-                        ReflectionTestUtils.setField(
-                                savedCategory,
-                                "id",
-                                UUID.randomUUID()
-                        );
-
-                        return savedCategory;
-                    });
-
-            when(categoryMapper.toCreateResponseDto(any(Category.class)))
-                    .thenAnswer(invocation -> {
-
-                        Category savedCategory =
-                                invocation.getArgument(0);
-
-                        return new CategoryCreateResponseDto(
-                                savedCategory.getId()
-                        );
+                        Category saved = invocation.getArgument(0);
+                        ReflectionTestUtils.setField(saved, "id", categoryId);
+                        return saved;
                     });
 
             // when
             CategoryCreateResponseDto response =
-                    categoryService.createCategory(request);
+                    categoryService.createCategory(userDetails, request);
 
             // then
-            assertThat(response.categoryId())
-                    .isNotNull();
-
-            ArgumentCaptor<Category> saveCaptor =
+            ArgumentCaptor<Category> categoryCaptor =
                     ArgumentCaptor.forClass(Category.class);
 
             verify(categoryRepository)
-                    .save(saveCaptor.capture());
+                    .save(categoryCaptor.capture());
 
             Category savedCategory =
-                    saveCaptor.getValue();
+                    categoryCaptor.getValue();
 
-            assertThat(savedCategory.getName())
-                    .isEqualTo("한식");
+            assertThat(savedCategory.getName()).isEqualTo(request.name());
+            assertThat(savedCategory.isHasHidden()).isEqualTo(request.hasHidden());
+            assertThat(savedCategory.getCreatedBy()).isEqualTo(userDetails.getUserId());
+            assertThat(savedCategory.getDeletedAt()).isNull();
 
-            assertThat(savedCategory.isHasHidden())
-                    .isFalse();
-
-            assertThat(savedCategory.getDeletedAt())
-                    .isNull();
-
-            verify(categoryMapper)
-                    .toEntity(request);
-
-            ArgumentCaptor<Category> responseCaptor =
-                    ArgumentCaptor.forClass(Category.class);
-
-            verify(categoryMapper)
-                    .toCreateResponseDto(responseCaptor.capture());
-
-            assertThat(responseCaptor.getValue().getId())
-                    .isEqualTo(savedCategory.getId());
+            assertThat(response.categoryId()).isEqualTo(savedCategory.getId());
         }
 
         @Test
@@ -138,13 +116,13 @@ class CategoryServiceTest {
                             false
                     );
 
-            when(categoryRepository.existsByNameAndDeletedAtIsNull("한식"))
+            when(categoryRepository.existsByNameAndDeletedAtIsNull(request.name()))
                     .thenReturn(true);
 
             // when & then
             ItsHereException exception = assertThrows(
                     ItsHereException.class,
-                    () -> categoryService.createCategory(request)
+                    () -> categoryService.createCategory(userDetails, request)
             );
 
             // then
@@ -152,53 +130,11 @@ class CategoryServiceTest {
                     .isEqualTo(ErrorCode.CATEGORY_NAME_DUPLICATE);
 
             verify(categoryRepository)
-                    .existsByNameAndDeletedAtIsNull("한식");
+                    .existsByNameAndDeletedAtIsNull(request.name());
 
             verify(categoryRepository, never())
                     .save(any(Category.class));
-
-            verify(categoryMapper, never())
-                    .toEntity(any());
-
-            verify(categoryMapper, never())
-                    .toCreateResponseDto(any());
         }
 
-        @Test
-        @DisplayName("카테고리 저장 중 예외 발생")
-        void createCategory_save_fail() {
-
-            // given
-            CategoryCreateRequestDto request =
-                    new CategoryCreateRequestDto(
-                            "일식",
-                            false
-                    );
-
-            Category category =
-                    Category.createCategory(request.name(), request.hasHidden());
-
-            when(categoryMapper.toEntity(request))
-                    .thenReturn(category);
-
-            when(categoryRepository.save(any(Category.class)))
-                    .thenThrow(new RuntimeException());
-
-            // when & then
-            assertThatThrownBy(() ->
-                    categoryService.createCategory(request)
-            )
-                    .isInstanceOf(RuntimeException.class);
-
-            verify(categoryMapper)
-                    .toEntity(request);
-
-            verify(categoryRepository)
-                    .save(category);
-
-            // 저장 실패 시 응답 변환 X
-            verify(categoryMapper, never())
-                    .toCreateResponseDto(any());
-        }
     }
 }
