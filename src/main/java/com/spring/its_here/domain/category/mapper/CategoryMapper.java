@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 public class CategoryMapper {
 
     public Category toEntity(CategoryCreateRequestDto dto){
-        return new Category(dto.name(), dto.hasHidden());
+        return Category.createCategory(dto.name(), dto.hasHidden());
     }
 
     public CategoryCreateResponseDto toCreateResponseDto(Category category){

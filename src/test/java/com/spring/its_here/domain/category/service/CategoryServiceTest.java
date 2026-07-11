@@ -57,10 +57,7 @@ class CategoryServiceTest {
                     );
 
             Category category =
-                    new Category(
-                            "한식",
-                            false
-                    );
+                    Category.createCategory(request.name(), request.hasHidden());
 
             when(categoryMapper.toEntity(request))
                     .thenReturn(category);
@@ -114,8 +111,8 @@ class CategoryServiceTest {
             assertThat(savedCategory.isHasHidden())
                     .isFalse();
 
-            assertThat(savedCategory.isHasDeleted())
-                    .isFalse();
+            assertThat(savedCategory.getDeletedAt())
+                    .isNull();
 
             verify(categoryMapper)
                     .toEntity(request);
@@ -141,7 +138,7 @@ class CategoryServiceTest {
                             false
                     );
 
-            when(categoryRepository.existsByNameAndHasDeletedFalse("한식"))
+            when(categoryRepository.existsByNameAndDeletedAtIsNull("한식"))
                     .thenReturn(true);
 
             // when & then
@@ -152,10 +149,10 @@ class CategoryServiceTest {
 
             // then
             assertThat(exception.getErrorCode())
-                    .isEqualTo(ErrorCode.DUPLICATE_CATEGORY_NAME);
+                    .isEqualTo(ErrorCode.CATEGORY_NAME_DUPLICATE);
 
             verify(categoryRepository)
-                    .existsByNameAndHasDeletedFalse("한식");
+                    .existsByNameAndDeletedAtIsNull("한식");
 
             verify(categoryRepository, never())
                     .save(any(Category.class));
@@ -174,15 +171,12 @@ class CategoryServiceTest {
             // given
             CategoryCreateRequestDto request =
                     new CategoryCreateRequestDto(
-                            "한식",
+                            "일식",
                             false
                     );
 
             Category category =
-                    new Category(
-                            "한식",
-                            false
-                    );
+                    Category.createCategory(request.name(), request.hasHidden());
 
             when(categoryMapper.toEntity(request))
                     .thenReturn(category);

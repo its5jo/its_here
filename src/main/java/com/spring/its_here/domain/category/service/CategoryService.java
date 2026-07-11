@@ -22,8 +22,8 @@ public class CategoryService {
     public CategoryCreateResponseDto createCategory(CategoryCreateRequestDto requestDto) {
 
         // 동일한 카테고리가 존재하는지 확인
-        if (categoryRepository.existsByNameAndHasDeletedFalse(requestDto.name())) {
-            throw new ItsHereException(ErrorCode.DUPLICATE_CATEGORY_NAME);
+        if (categoryRepository.existsByNameAndDeletedAtIsNull(requestDto.name())) {
+            throw new ItsHereException(ErrorCode.CATEGORY_NAME_DUPLICATE);
         }
 
         Category category = categoryMapper.toEntity(requestDto);
