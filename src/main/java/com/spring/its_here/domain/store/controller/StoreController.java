@@ -38,8 +38,10 @@ public class StoreController {
     }
 
     @GetMapping("/{storeId}")
-    public ResponseEntity<ApiResponse<StoreGetOneResponseDto>> getOneStore(@PathVariable UUID storeId){
-        StoreGetOneResponseDto responseDto = storeService.getOneStore(storeId);
+    public ResponseEntity<ApiResponse<StoreGetOneResponseDto>> getOneStore(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID storeId){
+        StoreGetOneResponseDto responseDto = storeService.getOneStore(userDetails, storeId);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success("가게 조회 성공", responseDto));

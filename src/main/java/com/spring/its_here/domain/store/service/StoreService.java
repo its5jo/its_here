@@ -12,6 +12,8 @@ import com.spring.its_here.domain.store.dto.response.StoreGetOneResponseDto;
 import com.spring.its_here.domain.store.dto.response.StoreUpdateResponseDto;
 import com.spring.its_here.domain.store.entity.Store;
 import com.spring.its_here.domain.store.repository.StoreRepository;
+import com.spring.its_here.domain.user.entity.UserEntity;
+import com.spring.its_here.domain.user.enums.UserRole;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
 import com.spring.its_here.global.security.CustomUserDetails;
@@ -39,8 +41,8 @@ public class StoreService {
 
         validateStoreCreate(userDetails, requestDto);
 
-        Category category = findCategoryOrThrow(requestDto.categoryId());
-        Area area = findAreaOrThrow(requestDto.areaId());
+        Category category = findCategoryByIdAndNotDeleted(requestDto.categoryId());
+        Area area = findAreaByIdAndNotDeleted(requestDto.areaId());
 
         Store store = Store.createStore(requestDto.name(), requestDto.address(),
                 userDetails.getUser(), category, area,
@@ -53,9 +55,20 @@ public class StoreService {
         return new StoreCreateResponseDto(newStore.getId());
     }
 
+    @PreAuthorize("hasAnyAuthority('OWNER','MANAGER','MASTER')")
     @Transactional(readOnly = true)
-    public StoreGetOneResponseDto getOneStore(UUID storeId) {
-        return null;
+    public StoreGetOneResponseDto getOneStore(CustomUserDetails userDetails, UUID storeId) {
+
+        Store store = findStoreByIdAndNotDeleted(storeId);
+        validateStoreOwner(userDetails, store.getUser().getId());
+
+        Category category = findCategoryById(store.getCategory().getId());
+
+        Area area = findAreaById(store.getArea().getId());
+
+        return new StoreGetOneResponseDto(store.getName(), store.getAddress(),
+                area.getTown(), category.getName(), store.calculateAverageRating(),
+                store.getHasOpen(), store.getOpenAt(), store.getClosedAt());
     }
 
     @Transactional(readOnly = true)
@@ -80,7 +93,14 @@ public class StoreService {
         existsDuplicateStoreName(requestDto.name());
 
         existsUsersStore(userDetails.getUserId());
+    }
 
+    private void validateStoreOwner(CustomUserDetails userDetails, Long storeOwnerId){
+        UserEntity user = userDetails.getUser();
+
+        if(user.getRole() == UserRole.OWNER && !user.getId().equals(storeOwnerId)){
+            throw new ItsHereException(ErrorCode.STORE_NOT_OWNED);
+        }
     }
 
     private void existsDuplicateStoreName(String name) {
@@ -95,13 +115,28 @@ public class StoreService {
         }
     }
 
-    private Category findCategoryOrThrow(UUID categoryId){
+    private Category findCategoryById(UUID storeId){
+        return categoryRepository.findById(storeId)
+                .orElseThrow(() -> new ItsHereException(ErrorCode.CATEGORY_NOT_FOUND));
+    }
+
+    private Area findAreaById(UUID areaId){
+        return areaRepository.findById(areaId)
+                .orElseThrow(() -> new ItsHereException(ErrorCode.AREA_NOT_FOUND));
+    }
+
+    private Category findCategoryByIdAndNotDeleted(UUID categoryId){
         return categoryRepository.findByIdAndDeletedAtIsNull(categoryId)
                 .orElseThrow(() -> new ItsHereException(ErrorCode.CATEGORY_NOT_FOUND));
     }
 
-    private Area findAreaOrThrow(UUID areaId){
+    private Area findAreaByIdAndNotDeleted(UUID areaId){
         return areaRepository.findByIdAndDeletedAtIsNull(areaId)
                 .orElseThrow(() -> new ItsHereException(ErrorCode.AREA_NOT_FOUND));
+    }
+
+    private Store findStoreByIdAndNotDeleted(UUID storeId) {
+        return storeRepository.findByIdAndDeletedAtIsNull(storeId)
+                .orElseThrow(() -> new ItsHereException(ErrorCode.STORE_NOT_FOUND));
     }
 }
