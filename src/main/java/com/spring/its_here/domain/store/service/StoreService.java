@@ -46,6 +46,8 @@ public class StoreService {
                 userDetails.getUser(), category, area,
                 requestDto.hasOpen(), requestDto.openAt(), requestDto.closedAt());
 
+        store.assignCreatedBy(userDetails.getUserId());
+
         Store newStore = storeRepository.save(store);
 
         return new StoreCreateResponseDto(newStore.getId());

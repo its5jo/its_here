@@ -86,7 +86,7 @@ class StoreServiceTest {
                     new CustomUserDetails(user);
 
             // 모든 검증을 통과한다고 가정
-            when(storeRepository.existsByNameAndDeletedAtIsNull("교촌치킨 역삼점"))
+            when(storeRepository.existsByNameAndDeletedAtIsNull(requestDto.name()))
                     .thenReturn(false);
 
             when(storeRepository.existsByUserIdAndDeletedAtIsNull(user.getId()))
@@ -147,6 +147,7 @@ class StoreServiceTest {
             assertThat(savedStore.getOpenAt()).isEqualTo(requestDto.openAt());
             assertThat(savedStore.getClosedAt()).isEqualTo(requestDto.closedAt());
             assertThat(savedStore.getHasOpen()).isEqualTo(requestDto.hasOpen());
+            assertThat(savedStore.getCreatedBy()).isEqualTo(userDetails.getUserId());
 
         }
 

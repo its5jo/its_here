@@ -77,6 +77,11 @@ public class Store extends BaseDeletableEntity {
         return store;
     }
 
+    public void accumulateReview(double rating) {
+        this.reviewTotalRating += rating;
+        this.reviewTotalCount += 1;
+    }
+
     // 수정 메서드
 
     // 삭제 메서드
