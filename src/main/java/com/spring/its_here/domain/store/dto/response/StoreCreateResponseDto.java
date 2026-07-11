@@ -1,4 +1,8 @@
 package com.spring.its_here.domain.store.dto.response;
 
-public record StoreCreateResponseDto() {
+import java.util.UUID;
+
+public record StoreCreateResponseDto(
+        UUID storeId
+) {
 }
