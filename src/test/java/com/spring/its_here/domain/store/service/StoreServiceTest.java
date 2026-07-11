@@ -95,6 +95,8 @@ class StoreServiceTest {
             Category category =
                     Category.createCategory("야식", false);
 
+            category.assignCreatedBy(userDetails.getUserId());
+
             when(categoryRepository.findByIdAndDeletedAtIsNull(categoryId))
                     .thenReturn(Optional.of(category));
 
@@ -147,6 +149,7 @@ class StoreServiceTest {
             assertThat(savedStore.getOpenAt()).isEqualTo(requestDto.openAt());
             assertThat(savedStore.getClosedAt()).isEqualTo(requestDto.closedAt());
             assertThat(savedStore.getHasOpen()).isEqualTo(requestDto.hasOpen());
+            assertThat(savedStore.getCreatedBy()).isEqualTo(userDetails.getUserId());
 
         }
 
