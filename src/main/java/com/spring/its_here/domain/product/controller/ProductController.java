@@ -3,6 +3,7 @@ package com.spring.its_here.domain.product.controller;
 import com.spring.its_here.domain.product.dto.command.ProductCreateCommand;
 import com.spring.its_here.domain.product.dto.request.ProductCreateRequestDto;
 import com.spring.its_here.domain.product.dto.response.ProductCreateResponseDto;
+import com.spring.its_here.domain.product.dto.response.ProductResponseDto;
 import com.spring.its_here.domain.product.service.ProductService;
 import com.spring.its_here.global.response.ApiResponse;
 import com.spring.its_here.global.security.CustomUserDetails;
@@ -50,8 +51,12 @@ public class ProductController {
     }
 
     @GetMapping("/products/{productId}")
-    public ResponseEntity<Void> getProduct(@PathVariable UUID productId) {
-        return ResponseEntity.ok().build();
+    public ResponseEntity<ApiResponse<ProductResponseDto>> getProduct(@PathVariable UUID productId) {
+        ProductResponseDto productResponseDto = productService.getProduct(productId);
+        return ResponseEntity.ok().body(ApiResponse.success(
+                        "SUCCESS", productResponseDto
+                )
+        );
     }
 
     @GetMapping("/stores/{storeId}/products")

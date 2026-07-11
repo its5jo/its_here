@@ -2,6 +2,7 @@ package com.spring.its_here.domain.product.service;
 
 import com.spring.its_here.domain.product.dto.command.ProductCreateCommand;
 import com.spring.its_here.domain.product.dto.response.ProductCreateResponseDto;
+import com.spring.its_here.domain.product.dto.response.ProductResponseDto;
 
 import java.util.UUID;
 
@@ -12,7 +13,7 @@ public interface ProductService {
 
     void deleteProduct(UUID productId);
 
-    void getProduct(UUID productId);
+    ProductResponseDto getProduct(UUID productId);
 
     void getStoreProducts(UUID storeId);
 }

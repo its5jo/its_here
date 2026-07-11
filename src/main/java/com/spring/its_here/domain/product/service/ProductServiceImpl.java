@@ -2,6 +2,7 @@ package com.spring.its_here.domain.product.service;
 
 import com.spring.its_here.domain.product.dto.command.ProductCreateCommand;
 import com.spring.its_here.domain.product.dto.response.ProductCreateResponseDto;
+import com.spring.its_here.domain.product.dto.response.ProductResponseDto;
 import com.spring.its_here.domain.product.entity.Product;
 import com.spring.its_here.domain.product.repository.ProductRepository;
 import com.spring.its_here.domain.store.entity.Store;
@@ -77,8 +78,16 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public void getProduct(UUID productId) {
+    public ProductResponseDto getProduct(UUID productId) {
+        Product product = productRepository.findById(productId).orElseThrow(() -> new ItsHereException(ErrorCode.NOT_FOUND));// TODO: errorCode 겹치기떄문에 어느정도 안정화되면 product_error 만들어서 변경
 
+        return new ProductResponseDto(
+                product.getName(),
+                product.getDescription(),
+                product.isHasHidden(),
+                product.getPrice(),
+                product.getImageUrl()
+        );
     }
 
     @Override
