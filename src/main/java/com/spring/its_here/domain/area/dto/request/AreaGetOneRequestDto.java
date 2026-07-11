@@ -1,6 +1,8 @@
 package com.spring.its_here.domain.area.dto.request;
 
-public record AreaGetOneRequestDto(
+import java.util.UUID;
 
+public record AreaGetOneRequestDto(
+        UUID areaId
 ) {
 }

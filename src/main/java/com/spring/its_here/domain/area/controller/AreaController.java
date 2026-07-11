@@ -38,13 +38,9 @@ public class AreaController {
 
     @GetMapping("/{areaId}")
     public ResponseEntity<ApiResponse<AreaGetOneResponseDto>> getOneArea(
-            @RequestBody AreaGetOneRequestDto areaGetOneRequestDto,
             @PathVariable("areaId") UUID areaId
     ) {
-        AreaGetOneResponseDto areaGetOneResponseDto = areaService.getOneArea(
-                areaGetOneRequestDto,
-                areaId
-        );
+        AreaGetOneResponseDto areaGetOneResponseDto = areaService.getOneArea(areaId);
 
         return ResponseEntity.ok(ApiResponse.success("서비스 지역 상세 조회 성공", areaGetOneResponseDto));
     }

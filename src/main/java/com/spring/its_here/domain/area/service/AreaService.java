@@ -57,10 +57,20 @@ public class AreaService {
 
     @Transactional(readOnly = true)
     public AreaGetOneResponseDto getOneArea(
-            AreaGetOneRequestDto areagetOneRequestDto,
             UUID areaId
     ) {
-        return null;
+        // TODO : errorCode 고치기 (AREA_NOT_FOUND) & findByIdAndDeletedAtIsNull 바꾸기
+        Area area = areaRepository.findById(areaId)
+                .orElseThrow(() -> new ItsHereException(ErrorCode.AREA_ALREADY_EXISTS));
+
+        return new AreaGetOneResponseDto(
+                area.getId(),
+                area.getCity(),
+                area.getDistrict(),
+                area.getTown(),
+                area.isHasAvailable(),
+                area.getCreatedAt()
+        );
     }
 
     @Transactional(readOnly = true)
