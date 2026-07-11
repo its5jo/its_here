@@ -5,20 +5,20 @@ import com.spring.its_here.domain.area.dto.request.AreaCreateRequestDto;
 import com.spring.its_here.domain.area.dto.request.AreaGetAllRequestDto;
 import com.spring.its_here.domain.area.dto.request.AreaGetOneRequestDto;
 import com.spring.its_here.domain.area.dto.request.AreaUpdateRequestDto;
-import com.spring.its_here.domain.area.dto.response.AreaCreateResponseDto;
-import com.spring.its_here.domain.area.dto.response.AreaGetAllResponseDto;
-import com.spring.its_here.domain.area.dto.response.AreaGetOneResponseDto;
-import com.spring.its_here.domain.area.dto.response.AreaUpdateResponseDto;
+import com.spring.its_here.domain.area.dto.response.*;
 import com.spring.its_here.domain.area.entity.Area;
 import com.spring.its_here.domain.area.repository.AreaRepository;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
 import com.spring.its_here.global.security.AuthenticationFacade;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -74,8 +74,38 @@ public class AreaService {
     }
 
     @Transactional(readOnly = true)
-    public AreaGetAllResponseDto getAllArea(AreaGetAllRequestDto areaGetAllRequestDto) {
-        return null;
+    public AreaGetAllResponseDto getAllArea(
+            AreaGetAllRequestDto areaGetAllRequestDto,
+            Pageable pageable
+    ) {
+        validatorSize(pageable.getPageSize());
+        validatorSortBy(pageable);
+
+        Page<Area> areaPage = areaRepository.searchAreas(
+                areaGetAllRequestDto.city(),
+                areaGetAllRequestDto.district(),
+                areaGetAllRequestDto.town(),
+                areaGetAllRequestDto.hasAvailable(),
+                pageable
+        );
+
+        List<AreaGetAllItemResponseDto> content = areaPage.getContent()
+                .stream()
+                .map(area -> new AreaGetAllItemResponseDto(
+                        area.getId(),
+                        area.getCity(),
+                        area.getDistrict(),
+                        area.getTown(),
+                        area.isHasAvailable()
+                )).toList();
+        AreaPageInfoResponseDto pageInfo = new AreaPageInfoResponseDto(
+                areaPage.getNumber(),
+                areaPage.getSize(),
+                areaPage.getTotalElements(),
+                areaPage.getTotalPages(),
+                areaPage.hasNext()
+        );
+        return new AreaGetAllResponseDto(content, pageInfo);
     }
 
     @Transactional
@@ -88,6 +118,14 @@ public class AreaService {
 
     @Transactional
     public void deleteArea(UUID areaId) {
+
+    }
+
+    private void validatorSize(int size) {
+
+    }
+
+    private void validatorSortBy(Pageable pageable) {
 
     }
 }

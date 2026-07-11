@@ -3,7 +3,6 @@ package com.spring.its_here.domain.area.controller;
 
 import com.spring.its_here.domain.area.dto.request.AreaCreateRequestDto;
 import com.spring.its_here.domain.area.dto.request.AreaGetAllRequestDto;
-import com.spring.its_here.domain.area.dto.request.AreaGetOneRequestDto;
 import com.spring.its_here.domain.area.dto.request.AreaUpdateRequestDto;
 import com.spring.its_here.domain.area.dto.response.AreaCreateResponseDto;
 import com.spring.its_here.domain.area.dto.response.AreaGetOneResponseDto;
@@ -13,6 +12,9 @@ import com.spring.its_here.domain.area.service.AreaService;
 import com.spring.its_here.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -47,9 +49,19 @@ public class AreaController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<AreaGetAllResponseDto>> getAllArea(
-            @RequestBody AreaGetAllRequestDto areaGetAllRequestDto
+            @ModelAttribute AreaGetAllRequestDto areaGetAllRequestDto,
+            @PageableDefault(
+                    page = 0,
+                    size = 10,
+                    sort = "createdAt",
+                    direction = Sort.Direction.DESC
+            )
+            Pageable pageable
     ) {
-        AreaGetAllResponseDto areaGetAllResponseDto = areaService.getAllArea(areaGetAllRequestDto);
+        AreaGetAllResponseDto areaGetAllResponseDto = areaService.getAllArea(
+                areaGetAllRequestDto,
+                pageable
+        );
 
         return ResponseEntity.ok(ApiResponse.success("서비스 지역 전체 조회 성공", areaGetAllResponseDto));
     }
