@@ -5,9 +5,11 @@ import com.spring.its_here.domain.product.dto.request.ProductCreateRequestDto;
 import com.spring.its_here.domain.product.dto.response.ProductCreateResponseDto;
 import com.spring.its_here.domain.product.service.ProductService;
 import com.spring.its_here.global.response.ApiResponse;
+import com.spring.its_here.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -22,15 +24,15 @@ public class ProductController {
 
     @PostMapping("/products")
     public ResponseEntity<ApiResponse<ProductCreateResponseDto>> createProduct(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestPart("product") ProductCreateRequestDto request,
             @RequestPart(value = "image", required = false) MultipartFile image
     ) {
         ProductCreateResponseDto productCreateResponseDto =
-                productService.createProduct(ProductCreateCommand.of(request, image));
+                productService.createProduct(ProductCreateCommand.of(request, image), userDetails.getUserId());
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(
-                        ApiResponse.success(
+                .body(ApiResponse.success(
                                 "상품 등록 성공",
                                 productCreateResponseDto
                         )

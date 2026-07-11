@@ -6,7 +6,7 @@ import com.spring.its_here.domain.product.dto.response.ProductCreateResponseDto;
 import java.util.UUID;
 
 public interface ProductService {
-    ProductCreateResponseDto createProduct(ProductCreateCommand productCreateCommand);
+    ProductCreateResponseDto createProduct(ProductCreateCommand productCreateCommand, Long loginUserId);
 
     void updateProduct(UUID productId);
 
