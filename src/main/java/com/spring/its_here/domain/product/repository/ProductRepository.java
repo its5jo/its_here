@@ -8,5 +8,5 @@ import java.util.UUID;
 
 public interface ProductRepository extends JpaRepository<Product, UUID> {
 
-//    List<Product> findAllByStoreId(UUID storeId); // TODO: Store 엔티티 생기면 주석 풀고 사용
+    List<Product> findAllByStoreId(UUID storeId);
 }
