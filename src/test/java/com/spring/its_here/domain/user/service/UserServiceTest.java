@@ -1,6 +1,5 @@
 package com.spring.its_here.domain.user.service;
 
-import com.spring.its_here.domain.user.dto.request.UserCreateRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserSignupRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserLoginRequestDto;
 import com.spring.its_here.domain.user.dto.response.TokenPairDto;
@@ -423,6 +422,84 @@ class UserServiceTest {
 
             verify(authenticationFacade).getCurrentUserId();
             verify(userRepository).findById(userId);
+        }
+    }
+
+    @Nested
+    @DisplayName("회원 삭제 API 테스트")
+    class DeleteTest {
+
+        @Test
+        @DisplayName("회원 삭제 성공")
+        void delete_success() {
+            // given
+            Long userId = 1L;
+
+            UserEntity user = UserEntity.create(
+                    "testUser",
+                    "encodedPassword",
+                    "테스터",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(user, "id", userId);
+
+            when(authenticationFacade.getCurrentUserId())
+                    .thenReturn(userId);
+
+            when(userRepository.findById(userId))
+                    .thenReturn(Optional.of(user));
+
+            // when
+            userService.delete(userId);
+
+            // then
+            assertThat(user.getHasDeleted()).isTrue();
+            assertThat(user.getDeletedAt()).isNotNull();
+            assertThat(user.getDeletedBy()).isEqualTo(userId);
+
+            verify(authenticationFacade).getCurrentUserId();
+            verify(userRepository).findById(userId);
+        }
+
+        @Test
+        @DisplayName("회원 삭제 실패 - 다른 사용자를 삭제하려고 하면 예외가 발생")
+        void delete_fail_forbidden() {
+            // given
+            Long currentUserId = 1L;
+            Long targetUserId = 2L;
+
+            UserEntity user = UserEntity.create(
+                    "testUser",
+                    "encodedPassword",
+                    "테스터",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(user, "id", currentUserId);
+
+            when(authenticationFacade.getCurrentUserId())
+                    .thenReturn(currentUserId);
+
+            when(userRepository.findById(currentUserId))
+                    .thenReturn(Optional.of(user));
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> userService.delete(targetUserId)
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.AUTH_FORBIDDEN);
+
+            assertThat(user.getHasDeleted()).isFalse();
+            assertThat(user.getDeletedAt()).isNull();
+            assertThat(user.getDeletedBy()).isNull();
+
+            verify(authenticationFacade).getCurrentUserId();
+            verify(userRepository).findById(currentUserId);
         }
     }
 }
