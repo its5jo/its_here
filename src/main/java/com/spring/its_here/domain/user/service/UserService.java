@@ -141,7 +141,13 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public UserSelfGetResponseDto getSelf() {
+        // 현재 인증된 사용자
         UserEntity user = getCurrentUser();
+
+        // 삭제된 사용자일 경우
+        if (user.getHasDeleted()) {
+            throw new ItsHereException(ErrorCode.USER_NOT_FOUND);
+        }
 
         // 최신 사용자 정보를 응답 DTO로 변환하여 반환
         return new UserSelfGetResponseDto(
