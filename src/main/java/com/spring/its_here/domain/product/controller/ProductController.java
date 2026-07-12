@@ -1,5 +1,6 @@
 package com.spring.its_here.domain.product.controller;
 
+import com.spring.its_here.domain.product.controller.docs.ProductApi;
 import com.spring.its_here.domain.product.dto.command.ProductCreateCommand;
 import com.spring.its_here.domain.product.dto.request.ProductCreateRequestDto;
 import com.spring.its_here.domain.product.dto.response.ProductCreateResponseDto;
@@ -9,6 +10,7 @@ import com.spring.its_here.global.response.ApiResponse;
 import com.spring.its_here.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -19,11 +21,12 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-public class ProductController {
+public class ProductController implements ProductApi {
 
     private final ProductService productService;
 
-    @PostMapping("/products")
+    @PostMapping(value = "/products", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Override
     public ResponseEntity<ApiResponse<ProductCreateResponseDto>> createProduct(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestPart("product") ProductCreateRequestDto request,
@@ -51,6 +54,7 @@ public class ProductController {
     }
 
     @GetMapping("/products/{productId}")
+    @Override
     public ResponseEntity<ApiResponse<ProductResponseDto>> getProduct(@PathVariable UUID productId) {
         ProductResponseDto productResponseDto = productService.getProduct(productId);
         return ResponseEntity.ok().body(ApiResponse.success(
