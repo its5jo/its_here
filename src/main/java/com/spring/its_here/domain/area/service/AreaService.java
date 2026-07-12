@@ -59,9 +59,8 @@ public class AreaService {
     public AreaGetOneResponseDto getOneArea(
             UUID areaId
     ) {
-        // TODO : errorCode 고치기 (AREA_NOT_FOUND) & findByIdAndDeletedAtIsNull 바꾸기
-        Area area = areaRepository.findById(areaId)
-                .orElseThrow(() -> new ItsHereException(ErrorCode.AREA_ALREADY_EXISTS));
+        Area area = areaRepository.findByIdAndDeletedAtIsNull(areaId)
+                .orElseThrow(() -> new ItsHereException(ErrorCode.AREA_NOT_FOUND));
 
         return new AreaGetOneResponseDto(
                 area.getId(),
