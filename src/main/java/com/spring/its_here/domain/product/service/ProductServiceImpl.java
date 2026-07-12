@@ -73,8 +73,33 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public void deleteProduct(UUID productId) {
+    @Transactional
+    public void deleteProduct(UUID productId, Long loginUserId) {
+        UserEntity user = userRepository.findById(loginUserId).orElseThrow(() -> new ItsHereException(ErrorCode.USER_NOT_FOUND));
 
+        if (user.getRole() != UserRole.OWNER) {
+            log.warn("상품 삭제 권한 없음. userId={}, role={}", loginUserId, user.getRole());
+            throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
+        }
+
+        Product product = productRepository.findById(productId).orElseThrow(() -> new ItsHereException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        if (!loginUserId.equals(product.getStore().getUser().getId())) {
+            log.warn("상품 삭제 권한 없음. userId={}, productId={}, storeId={}",
+                    loginUserId,
+                    product.getId(),
+                    product.getStore().getId())
+            ;
+            throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
+        }
+
+        product.delete(loginUserId);
+        
+        log.info("상품 삭제 처리 요청 완료. productId={}, storeId={}, userId={}",
+                product.getId(),
+                product.getStore().getId(),
+                loginUserId
+        );
     }
 
     @Override

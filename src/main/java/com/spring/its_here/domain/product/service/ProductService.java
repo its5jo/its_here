@@ -11,7 +11,7 @@ public interface ProductService {
 
     void updateProduct(UUID productId);
 
-    void deleteProduct(UUID productId);
+    void deleteProduct(UUID productId, Long loginUserId);
 
     ProductResponseDto getProduct(UUID productId);
 

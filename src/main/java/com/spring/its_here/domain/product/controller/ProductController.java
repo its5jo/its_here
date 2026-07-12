@@ -49,7 +49,11 @@ public class ProductController implements ProductApi {
     }
 
     @DeleteMapping("/products/{productId}")
-    public ResponseEntity<Void> deleteProduct(@PathVariable UUID productId) {
+    public ResponseEntity<Void> deleteProduct(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID productId
+    ) {
+        productService.deleteProduct(productId, userDetails.getUserId());
         return ResponseEntity.noContent().build();
     }
 

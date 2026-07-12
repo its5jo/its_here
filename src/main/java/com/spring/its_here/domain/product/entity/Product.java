@@ -1,12 +1,11 @@
 package com.spring.its_here.domain.product.entity;
 
 import com.spring.its_here.domain.store.entity.Store;
-import com.spring.its_here.global.base.BaseEntity;
+import com.spring.its_here.global.base.BaseDeletableEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
 import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 
@@ -17,7 +16,7 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "p_product")
-public class Product extends BaseEntity {
+public class Product extends BaseDeletableEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", nullable = false, updatable = false)
@@ -54,7 +53,7 @@ public class Product extends BaseEntity {
 
     @JoinColumn(name = "store_id", nullable = false)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    private Store store;  // TODO: Store Entity 생성되면 주석 풀어서 연관관계 설정
+    private Store store;
 
     private Product(String name, String description, boolean hasHidden, int price, String imageUrl, Store store) {
         validateName(name);
@@ -114,13 +113,7 @@ public class Product extends BaseEntity {
             this.imageUrl = imageUrl;
         }
     }
-
-    public void delete(Long deletedBy) {
-        this.deletedAt = Instant.now();
-        this.deletedBy = deletedBy;
-    }
-
-
+    
     private static void validateName(String name) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("상품명은 필수입니다.");
