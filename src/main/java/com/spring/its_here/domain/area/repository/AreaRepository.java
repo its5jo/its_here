@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public interface AreaRepository extends JpaRepository<Area, UUID> {
@@ -32,4 +33,6 @@ public interface AreaRepository extends JpaRepository<Area, UUID> {
             @Param("hasAvailable") Boolean hasAvailable,
             Pageable pageable
     );
+
+    Optional<Area> findByIdAndDeletedAtIsNull(UUID areaId);
 }

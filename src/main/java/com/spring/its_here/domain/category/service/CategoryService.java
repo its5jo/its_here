@@ -3,11 +3,12 @@ package com.spring.its_here.domain.category.service;
 import com.spring.its_here.domain.category.dto.request.CategoryCreateRequestDto;
 import com.spring.its_here.domain.category.dto.response.CategoryCreateResponseDto;
 import com.spring.its_here.domain.category.entity.Category;
-import com.spring.its_here.domain.category.mapper.CategoryMapper;
 import com.spring.its_here.domain.category.repository.CategoryRepository;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
+import com.spring.its_here.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,19 +17,25 @@ import org.springframework.transaction.annotation.Transactional;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
-    private final CategoryMapper categoryMapper;
 
+    @PreAuthorize("hasAnyAuthority('MANAGER','MASTER')")
     @Transactional
-    public CategoryCreateResponseDto createCategory(CategoryCreateRequestDto requestDto) {
+    public CategoryCreateResponseDto createCategory(
+            CustomUserDetails userDetails, CategoryCreateRequestDto requestDto) {
 
-        // 동일한 카테고리가 존재하는지 확인
-        if (categoryRepository.existsByNameAndHasDeletedFalse(requestDto.name())) {
-            throw new ItsHereException(ErrorCode.DUPLICATE_CATEGORY_NAME);
+        validateCategoryCreate(requestDto);
+
+        Category category = Category.createCategory(requestDto.name(), requestDto.hasHidden());
+        category.assignCreatedBy(userDetails.getUserId());
+
+        Category savedCategory = categoryRepository.save(category);
+        return new CategoryCreateResponseDto(savedCategory.getId());
+    }
+
+    private void validateCategoryCreate(CategoryCreateRequestDto requestDto) {
+        if (categoryRepository.existsByNameAndDeletedAtIsNull(requestDto.name())) {
+            throw new ItsHereException(ErrorCode.CATEGORY_NAME_DUPLICATE);
         }
-
-        Category category = categoryMapper.toEntity(requestDto);
-        Category createdCategory = categoryRepository.save(category);
-        return categoryMapper.toCreateResponseDto(createdCategory);
     }
 
 }
