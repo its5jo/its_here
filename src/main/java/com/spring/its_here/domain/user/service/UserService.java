@@ -1,8 +1,8 @@
 package com.spring.its_here.domain.user.service;
 
-import com.spring.its_here.domain.user.dto.request.UserCreateRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserSignupRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserLoginRequestDto;
+import com.spring.its_here.domain.user.dto.request.UserUpdateRequestDto;
 import com.spring.its_here.domain.user.dto.response.TokenPairDto;
 import com.spring.its_here.domain.user.dto.response.UserResponseDto;
 import com.spring.its_here.domain.user.dto.response.UserSelfGetResponseDto;
@@ -164,5 +164,22 @@ public class UserService {
         // Soft Delete 진행 및 감사 필드 작성
         currentUser.delete(userId);
         currentUser.hasDeleted(true);
+    }
+
+    @Transactional
+    public UserResponseDto update(Long userId, UserUpdateRequestDto userUpdateRequestDto) {
+        // 현재 인증된 사용자
+        UserEntity currentUser = getCurrentUser();
+
+        // 다른 유저의 정보 수정을 요청할 경우
+        if (!currentUser.getId().equals(userId)) {
+            throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
+        }
+
+        // 비밀번호와 활동명 변경
+        currentUser.updatePassword(passwordEncoder.encode(userUpdateRequestDto.password()));
+        currentUser.updateNickname(userUpdateRequestDto.nickname());
+
+        return new UserResponseDto(userId);
     }
 }

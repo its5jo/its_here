@@ -3,6 +3,7 @@ package com.spring.its_here.domain.user.controller;
 import com.spring.its_here.domain.user.dto.request.UserCreateRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserSignupRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserLoginRequestDto;
+import com.spring.its_here.domain.user.dto.request.UserUpdateRequestDto;
 import com.spring.its_here.domain.user.dto.response.TokenPairDto;
 import com.spring.its_here.domain.user.dto.response.UserResponseDto;
 import com.spring.its_here.domain.user.dto.response.UserSelfGetResponseDto;
@@ -144,5 +145,22 @@ public class UserController {
         return ResponseEntity
                 .noContent()
                 .build();
+    }
+
+    @Operation(
+            summary = "사용자 수정",
+            description = "권한이 있는 사용자가 본인의 정보를 수정합니다."
+    )
+    @PutMapping("/{userId}")
+    public ResponseEntity<ApiResponse<UserResponseDto>> updateUser(
+            @PathVariable Long userId,
+            @Valid @RequestBody UserUpdateRequestDto userUpdateRequestDto
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        "사용자 수정 성공",
+                        userService.update(userId, userUpdateRequestDto)
+                ));
     }
 }

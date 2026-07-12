@@ -50,4 +50,12 @@ public class UserEntity extends BaseDeletableEntity {
     public void hasDeleted(Boolean hasDeleted) {
         this.hasDeleted = hasDeleted;
     }
+
+    public void updatePassword(String password) {
+        this.password = password;
+    }
+
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
+    }
 }
