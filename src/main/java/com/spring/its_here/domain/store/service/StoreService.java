@@ -63,9 +63,8 @@ public class StoreService {
         Store store = findStoreByIdAndNotDeleted(storeId);
         validateStoreOwner(userDetails, store.getUser().getId());
 
-        Category category = findCategoryById(store.getCategory().getId());
-
-        Area area = findAreaById(store.getArea().getId());
+        Category category = store.getCategory();
+        Area area = store.getArea();
 
         return new StoreGetOneResponseDto(store.getName(), store.getAddress(),
                 area.getTown(), category.getName(), store.calculateAverageRating(),
