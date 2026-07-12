@@ -6,6 +6,7 @@ import com.spring.its_here.domain.order.enums.OrderStatus;
 import com.spring.its_here.domain.order.repository.OrderRepository;
 import com.spring.its_here.domain.review.dto.request.ReviewCreateRequestDto;
 import com.spring.its_here.domain.review.dto.response.ReviewCreateResponseDto;
+import com.spring.its_here.domain.review.dto.response.ReviewGetOneResponseDto;
 import com.spring.its_here.domain.review.entity.Review;
 import com.spring.its_here.domain.review.repository.ReviewRepository;
 import com.spring.its_here.domain.store.entity.Store;
@@ -18,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -68,6 +71,23 @@ public class ReviewService {
                 reviewSave.getOrder().getId(),
                 reviewSave.getStore().getId(),
                 reviewSave.getUser().getId()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public ReviewGetOneResponseDto getOneReview(UUID reviewId) {
+        Review review = reviewRepository.findByIdAndDeletedAtIsNull(reviewId)
+                .orElseThrow(() -> new ItsHereException(ErrorCode.REVIEW_NOT_FOUND));
+
+        return new ReviewGetOneResponseDto(
+                review.getId(),
+                review.getOrder().getId(),
+                review.getStore().getId(),
+                review.getUser().getId(),
+                review.getRating(),
+                review.getContent(),
+                review.getCreatedAt(),
+                review.getUpdatedAt()
         );
     }
 }
