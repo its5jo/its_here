@@ -152,32 +152,6 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponseDto create(UserCreateRequestDto userCreateRequestDto) {
-        // 동일 아이디 존재 확인
-        existsByUsername(userCreateRequestDto.username());
-
-        // 현재 인증된 사용자
-        UserEntity user = getCurrentUser();
-
-        if (user.getRole() != UserRole.MASTER) {
-            throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
-        }
-
-        String encodedPassword = passwordEncoder.encode(userCreateRequestDto.password());
-
-        UserEntity newManager = UserEntity.create(
-                userCreateRequestDto.username(),
-                encodedPassword,
-                userCreateRequestDto.nickname(),
-                UserRole.MANAGER
-        );
-
-        userRepository.save(newManager);
-
-        return new UserResponseDto(newManager.getId());
-    }
-
-    @Transactional
     public void delete(Long userId) {
         // 현재 인증된 사용자
         UserEntity currentUser = getCurrentUser();

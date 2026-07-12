@@ -132,22 +132,6 @@ public class UserController {
     }
 
     @Operation(
-            summary = "사용자 생성",
-            description = "MASTER 권한이 있는 사용자가 MANAGER 권한의 사용자를 생성합니다."
-    )
-    @PostMapping
-    public ResponseEntity<ApiResponse<UserResponseDto>> createUser(
-            @Valid @RequestBody UserCreateRequestDto userCreateRequestDto
-    ) {
-        return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(ApiResponse.success(
-                        "사용자 생성 성공",
-                        userService.create(userCreateRequestDto)
-                ));
-    }
-
-    @Operation(
             summary = "사용자 삭제",
             description = "권한이 있는 사용자가 본인의 정보를 삭제합니다."
     )
