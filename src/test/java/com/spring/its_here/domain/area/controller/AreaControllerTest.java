@@ -170,15 +170,33 @@ class AreaControllerTest {
 
         @ParameterizedTest
         @ValueSource(ints = {1, 20, 40, 100})
-        @DisplayName("조회개수가 10, 30, 50이 아니면 예외")
+        @DisplayName("조회개수가 10, 30, 50이 아니면 10건으로 조회")
         void getAllArea_invalid_size(int size) throws Exception {
-            mockMvc.perform(get("/api/areas")
-                            .param("size", String.valueOf(size))
-                            .param("sort", "createdAt, desc"))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.code").value(ErrorCode.AREA_INVALID_SIZE.getCode()));
+            AreaGetAllResponseDto areaGetAllResponseDto = new AreaGetAllResponseDto(
+                    List.of(),
+                    new AreaPageInfoResponseDto(
+                            0,
+                            10,
+                            0,
+                            0,
+                            false
+                    )
+            );
 
-            verify(areaService, never()).getAllArea(any(), any());
+            given(areaService.getAllArea(
+                    any(AreaGetAllRequestDto.class),
+                    any(Pageable.class)
+            )).willReturn(areaGetAllResponseDto);
+
+            mockMvc.perform(get("/api/areas")
+                            .param("size", String.valueOf(size)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.pageInfo.size").value(10));
+
+            verify(areaService).getAllArea(
+                    any(AreaGetAllRequestDto.class),
+                    any(Pageable.class)
+            );
         }
 
         @Test

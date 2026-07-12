@@ -5,6 +5,6 @@ import java.util.List;
 
 public record AreaGetAllResponseDto(
         List<AreaGetAllItemResponseDto> content,
-        AreaPageInfoResponseDto areaPageInfoResponseDto
+        AreaPageInfoResponseDto pageInfo
 ) {
 }

@@ -14,6 +14,7 @@ import com.spring.its_here.global.advice.ItsHereException;
 import com.spring.its_here.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -60,12 +61,12 @@ public class AreaController {
             )
             Pageable pageable
     ) {
-        validatorSize(pageable.getPageSize());
         validatorSortBy(pageable);
+        Pageable normalizeSize = normalizeSize(pageable);
 
         AreaGetAllResponseDto areaGetAllResponseDto = areaService.getAllArea(
                 areaGetAllRequestDto,
-                pageable
+                normalizeSize
         );
 
         return ResponseEntity.ok(ApiResponse.success("서비스 지역 전체 조회 성공", areaGetAllResponseDto));
@@ -90,10 +91,17 @@ public class AreaController {
     }
 
 
-    private void validatorSize(int size) {
+    private Pageable normalizeSize(Pageable pageable) {
+        int size = pageable.getPageSize();
+
         if (size != 10 && size != 30 && size != 50) {
-            throw new ItsHereException(ErrorCode.AREA_INVALID_SIZE);
+            size = 10;
         }
+        return PageRequest.of(
+                pageable.getPageNumber(),
+                size,
+                pageable.getSort()
+        );
     }
 
     private void validatorSortBy(Pageable pageable) {

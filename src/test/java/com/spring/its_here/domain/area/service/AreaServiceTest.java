@@ -221,8 +221,8 @@ class AreaServiceTest {
             assertThat(areaGetAllResponseDto).isNotNull();
             assertThat(areaGetAllResponseDto.content()).hasSize(2);
             assertThat(areaGetAllResponseDto.content().get(0).areaId()).isEqualTo(firstAreaId);
-            assertThat(areaGetAllResponseDto.areaPageInfoResponseDto().totalElements()).isEqualTo(12L);
-            assertThat(areaGetAllResponseDto.areaPageInfoResponseDto().hasNext()).isTrue();
+            assertThat(areaGetAllResponseDto.pageInfo().totalElements()).isEqualTo(12L);
+            assertThat(areaGetAllResponseDto.pageInfo().hasNext()).isTrue();
 
             verify(areaRepository).searchAreas(
                     areaGetAllRequestDto.city(),
