@@ -78,8 +78,9 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ProductResponseDto getProduct(UUID productId) {
-        Product product = productRepository.findById(productId).orElseThrow(() -> new ItsHereException(ErrorCode.NOT_FOUND));// TODO: errorCode 겹치기떄문에 어느정도 안정화되면 product_error 만들어서 변경
+        Product product = productRepository.findById(productId).orElseThrow(() -> new ItsHereException(ErrorCode.PRODUCT_NOT_FOUND));
 
         return new ProductResponseDto(
                 product.getName(),

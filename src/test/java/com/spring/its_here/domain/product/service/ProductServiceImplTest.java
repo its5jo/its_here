@@ -2,6 +2,7 @@ package com.spring.its_here.domain.product.service;
 
 import com.spring.its_here.domain.product.dto.command.ProductCreateCommand;
 import com.spring.its_here.domain.product.dto.response.ProductCreateResponseDto;
+import com.spring.its_here.domain.product.dto.response.ProductResponseDto;
 import com.spring.its_here.domain.product.entity.Product;
 import com.spring.its_here.domain.product.repository.ProductRepository;
 import com.spring.its_here.domain.store.entity.Store;
@@ -151,5 +152,58 @@ class ProductServiceImplTest {
 
     @Nested
     class GetProductTest {
+
+        @Test
+
+        @DisplayName("상품 ID로 상품을 조회할 수 있다")
+        void getProduct_success() {
+
+            // given
+            UUID productId = UUID.randomUUID();
+            Product product = mock(Product.class);
+            UUID imageUuid = UUID.randomUUID();
+            when(productRepository.findById(productId))
+                    .thenReturn(Optional.of(product));
+            when(product.getName()).thenReturn("아메리카노");
+            when(product.getDescription()).thenReturn("고소한 커피");
+            when(product.isHasHidden()).thenReturn(false);
+            when(product.getPrice()).thenReturn(4_000);
+            when(product.getImageUrl()).thenReturn("/images/" + imageUuid + ".jpg");
+
+            // when
+            ProductResponseDto response =
+                    productService.getProduct(productId);
+
+            // then
+            assertThat(response.name()).isEqualTo("아메리카노");
+            assertThat(response.description()).isEqualTo("고소한 커피");
+            assertThat(response.hasHidden()).isFalse();
+            assertThat(response.price()).isEqualTo(4_000);
+            assertThat(response.imageUrl())
+                    .isEqualTo("/images/" + imageUuid + ".jpg");
+
+            verify(productRepository).findById(productId);
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 상품 조회 시 예외가 발생한다")
+        void getProduct_fail_notFound() {
+            // given
+            UUID productId = UUID.randomUUID();
+
+            when(productRepository.findById(productId))
+                    .thenReturn(Optional.empty());
+
+            // when & then
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> productService.getProduct(productId)
+            );
+
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
+
+            verify(productRepository).findById(productId);
+        }
     }
 }
