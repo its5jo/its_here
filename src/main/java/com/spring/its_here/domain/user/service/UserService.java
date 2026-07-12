@@ -162,9 +162,14 @@ public class UserService {
         // 현재 인증된 사용자
         UserEntity currentUser = getCurrentUser();
 
-        // 다른 유저를 삭제 요청할 경우
+        // 다른 사용자를 삭제 요청한 경우
         if (!currentUser.getId().equals(userId)) {
             throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
+        }
+
+        // 이미 삭제된 사용자일 경우
+        if (currentUser.getHasDeleted()) {
+            throw new ItsHereException(ErrorCode.USER_NOT_FOUND);
         }
 
         // Soft Delete 진행 및 감사 필드 작성

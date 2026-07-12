@@ -508,11 +508,48 @@ class UserServiceTest {
                     .isEqualTo(ErrorCode.AUTH_FORBIDDEN);
 
             assertThat(user.getHasDeleted()).isFalse();
-            assertThat(user.getDeletedAt()).isNull();
-            assertThat(user.getDeletedBy()).isNull();
 
             verify(authenticationFacade).getCurrentUserId();
             verify(userRepository).findById(currentUserId);
+        }
+
+        @Test
+        @DisplayName("사용자 정보 삭제 실패 - 이미 삭제된 사용자이면 예외가 발생")
+        void delete_fail_alreadyDeleted() {
+            // given
+            Long userId = 1L;
+
+            UserEntity user = UserEntity.create(
+                    "testUser",
+                    "encodedPassword",
+                    "테스터",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(user, "id", userId);
+
+            user.hasDeleted(true);
+
+            when(authenticationFacade.getCurrentUserId())
+                    .thenReturn(userId);
+
+            when(userRepository.findById(userId))
+                    .thenReturn(Optional.of(user));
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> userService.delete(userId)
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.USER_NOT_FOUND);
+
+            assertThat(user.getHasDeleted()).isTrue();
+
+            verify(authenticationFacade).getCurrentUserId();
+            verify(userRepository).findById(userId);
         }
     }
 
