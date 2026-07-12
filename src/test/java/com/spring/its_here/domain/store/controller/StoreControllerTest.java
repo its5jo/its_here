@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.spring.its_here.domain.store.dto.request.StoreCreateRequestDto;
 import com.spring.its_here.domain.store.dto.response.StoreCreateResponseDto;
+import com.spring.its_here.domain.store.dto.response.StoreGetAllResponseDto;
+import com.spring.its_here.domain.store.dto.response.StoreGetOneResponseDto;
 import com.spring.its_here.domain.store.service.StoreService;
 import com.spring.its_here.global.advice.GlobalExceptionHandler;
 
@@ -17,17 +19,21 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.data.domain.*;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalTime;
+import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -51,8 +57,11 @@ class StoreControllerTest {
     @BeforeEach
     void setUp() {
 
-        mockMvc = standaloneSetup(storeController) // Controller만 테스트 환경에 올림
+        mockMvc = standaloneSetup(storeController)
                 .setControllerAdvice(new GlobalExceptionHandler())
+                .setCustomArgumentResolvers(
+                        new PageableHandlerMethodArgumentResolver()
+                )
                 .build();
 
         objectMapper = new ObjectMapper();
@@ -285,7 +294,131 @@ class StoreControllerTest {
             verify(storeService)
                     .createStore(any(), any());
         }
+    }
 
+    @Nested
+    @DisplayName("가게 조회")
+    class getStore {
 
+        @Test
+        @DisplayName("가게 단건 조회 성공")
+        void getStore_success() throws Exception {
+
+            // given
+            UUID storeId = UUID.randomUUID();
+
+            StoreGetOneResponseDto responseDto =
+                    new StoreGetOneResponseDto(
+                            "교촌치킨 강남점",
+                            "서울 강남구",
+                            "역삼동",
+                            "치킨",
+                            4.5,
+                            true,
+                            LocalTime.of(9, 0),
+                            LocalTime.of(22, 0)
+                    );
+
+            given(storeService.getOneStore(any(), eq(storeId)))
+                    .willReturn(responseDto);
+
+            // when & then
+            mockMvc.perform(
+                            get("/api/stores/{storeId}", storeId)
+                    )
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message")
+                            .value("가게 조회 성공"))
+                    .andExpect(jsonPath("$.code")
+                            .value("SUCCESS"))
+                    .andExpect(jsonPath("$.data.name")
+                            .value("교촌치킨 강남점"))
+                    .andExpect(jsonPath("$.data.address")
+                            .value("서울 강남구"))
+                    .andExpect(jsonPath("$.data.category")
+                            .value("치킨"))
+                    .andExpect(jsonPath("$.data.area")
+                            .value("역삼동"))
+                    .andExpect(jsonPath("$.data.rating")
+                            .value(4.5))
+                    .andExpect(jsonPath("$.data.hasOpen")
+                            .value(true))
+                    .andExpect(jsonPath("$.data.openAt")
+                            .value("9:00"))
+                    .andExpect(jsonPath("$.data.closedAt")
+                            .value("22:00"));
+        }
+
+        @Test
+        @DisplayName("가게 목록 조회 성공")
+        void getAllStores_success() throws Exception {
+
+            // given
+            StoreGetAllResponseDto dto =
+                    new StoreGetAllResponseDto(
+                            UUID.randomUUID(),
+                            "교촌치킨 강남점",
+                            "치킨",
+                            "서울 강남구",
+                            "역삼동",
+                            4.5,
+                            true
+                    );
+
+            Pageable pageable =
+                    PageRequest.of(
+                            0,
+                            10,
+                            Sort.by("createdAt").ascending()
+                    );
+
+            Page<StoreGetAllResponseDto> page =
+                    new PageImpl<>(
+                            List.of(dto),
+                            pageable,
+                            1
+                    );
+
+            given(storeService.getAllStores(any(), any(), any()))
+                    .willReturn(page);
+
+            // when & then
+            mockMvc.perform(
+                            get("/api/stores")
+                                    .param("page", "0")
+                                    .param("size", "10")
+                    )
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message")
+                            .value("가게 목록 조회 성공"))
+                    .andExpect(jsonPath("$.code")
+                            .value("SUCCESS"))
+
+                    .andExpect(jsonPath("$.data.content.length()")
+                            .value(1))
+                    .andExpect(jsonPath("$.data.content[0].name")
+                            .value("교촌치킨 강남점"))
+                    .andExpect(jsonPath("$.data.content[0].category")
+                            .value("치킨"))
+                    .andExpect(jsonPath("$.data.content[0].address")
+                            .value("서울 강남구"))
+                    .andExpect(jsonPath("$.data.content[0].area")
+                            .value("역삼동"))
+                    .andExpect(jsonPath("$.data.content[0].rating")
+                            .value(4.5))
+                    .andExpect(jsonPath("$.data.content[0].hasOpen")
+                            .value(true))
+
+                    .andExpect(jsonPath("$.data.pageInfo.paginationType")
+                            .value("OFFSET"))
+                    .andExpect(jsonPath("$.data.pageInfo.hasNext")
+                            .value(false))
+                    .andExpect(jsonPath("$.data.pageInfo.totalCount")
+                            .value(1))
+                    .andExpect(jsonPath("$.data.pageInfo.sortBy")
+                            .value("createdAt"))
+                    .andExpect(jsonPath("$.data.pageInfo.sortDirection")
+                            .value("ASC"));
+        }
     }
 }

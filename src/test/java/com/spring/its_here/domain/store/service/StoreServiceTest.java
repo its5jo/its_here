@@ -6,6 +6,8 @@ import com.spring.its_here.domain.category.entity.Category;
 import com.spring.its_here.domain.category.repository.CategoryRepository;
 import com.spring.its_here.domain.store.dto.request.StoreCreateRequestDto;
 import com.spring.its_here.domain.store.dto.response.StoreCreateResponseDto;
+import com.spring.its_here.domain.store.dto.response.StoreGetAllResponseDto;
+import com.spring.its_here.domain.store.dto.response.StoreGetOneResponseDto;
 import com.spring.its_here.domain.store.entity.Store;
 import com.spring.its_here.domain.store.repository.StoreRepository;
 import com.spring.its_here.domain.user.entity.UserEntity;
@@ -21,9 +23,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.*;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -52,7 +56,7 @@ class StoreServiceTest {
     class CreateStore {
 
         @Test
-        @DisplayName("가게 생성 성공")
+        @DisplayName("성공")
         void createStore_success() {
 
             // given
@@ -152,7 +156,7 @@ class StoreServiceTest {
         }
 
         @Test
-        @DisplayName("가게 생성 실패 - 이미 이름이 같은 가게가 존재")
+        @DisplayName("이미 이름이 같은 가게가 존재")
         void createStore_duplicate_store_name() {
 
             // given
@@ -209,7 +213,7 @@ class StoreServiceTest {
         }
 
         @Test
-        @DisplayName("가게 생성 실패 - 없거나 삭제된 카테고리")
+        @DisplayName("없거나 삭제된 카테고리")
         void createStore_not_exists_category() {
 
             // given
@@ -266,7 +270,7 @@ class StoreServiceTest {
         }
 
         @Test
-        @DisplayName("가게 생성 실패 - 없거나 삭제된 지역")
+        @DisplayName("없거나 삭제된 지역")
         void createStore_not_exists_area() {
 
             // given
@@ -330,6 +334,346 @@ class StoreServiceTest {
 
         }
 
+    }
+
+    @Nested
+    @DisplayName("가게 단건 조회")
+    class GetOntStore {
+
+        @Test
+        @DisplayName("성공")
+        void getOneStore_success() {
+
+            // given
+
+            UUID storeId = UUID.randomUUID();
+            UUID categoryId = UUID.randomUUID();
+            UUID areaId = UUID.randomUUID();
+
+            UserEntity user = UserEntity.create(
+                    "test1",
+                    "password",
+                    "닉네임",
+                    UserRole.OWNER
+            );
+
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            CustomUserDetails userDetails =
+                    new CustomUserDetails(user);
+
+            Category category = Category.createCategory("야식", false);
+
+            ReflectionTestUtils.setField(category, "id", categoryId);
+
+            Area area = Area.create("서울특별시", "강남구", "역삼동");
+
+            ReflectionTestUtils.setField(area, "id", areaId);
+
+            Store store = Store.createStore(
+                    "교촌치킨 역삼점",
+                    "서울 강남구",
+                    user,
+                    category,
+                    area,
+                    true,
+                    LocalTime.of(9, 0),
+                    LocalTime.of(22, 0)
+            );
+
+            ReflectionTestUtils.setField(store, "id", storeId);
+
+            when(storeRepository.findByIdAndDeletedAtIsNull(storeId))
+                    .thenReturn(Optional.of(store));
+
+            // when
+            StoreGetOneResponseDto responseDto =
+                    storeService.getOneStore(userDetails, storeId);
+
+            // then
+
+            assertThat(responseDto).isNotNull();
+            assertThat(responseDto.name()).isEqualTo(store.getName());
+            assertThat(responseDto.address()).isEqualTo(store.getAddress());
+            assertThat(responseDto.category()).isEqualTo(category.getName());
+            assertThat(responseDto.area()).isEqualTo(area.getTown());
+            assertThat(responseDto.rating()).isEqualTo(0.0);
+            assertThat(responseDto.hasOpen()).isEqualTo(store.getHasOpen());
+            assertThat(responseDto.openAt()).isEqualTo(store.getOpenAt());
+            assertThat(responseDto.closedAt()).isEqualTo(store.getClosedAt());
+
+            verify(storeRepository)
+                    .findByIdAndDeletedAtIsNull(storeId);
+
+            // 추가 Repository 호출이 없는지 검증
+            verifyNoMoreInteractions(
+                    storeRepository,
+                    categoryRepository,
+                    areaRepository
+            );
+        }
+
+        @Test
+        @DisplayName("삭제되거나 없는 가게인 경우")
+        void store_not_exists_or_deleted() {
+
+            // given
+            UUID storeId = UUID.randomUUID();
+            UUID categoryId = UUID.randomUUID();
+            UUID areaId = UUID.randomUUID();
+
+            UserEntity storeOwner = UserEntity.create(
+                    "owner1",
+                    "password",
+                    "사장1",
+                    UserRole.OWNER
+            );
+            ReflectionTestUtils.setField(storeOwner, "id", 1L);
+
+            // 다른 가게 주인
+            UserEntity loginUser = UserEntity.create(
+                    "owner2",
+                    "password",
+                    "사장2",
+                    UserRole.OWNER
+            );
+
+            ReflectionTestUtils.setField(loginUser, "id", 2L);
+
+            CustomUserDetails userDetails = new CustomUserDetails(loginUser);
+
+            Category category = Category.createCategory("야식", false);
+
+            ReflectionTestUtils.setField(category, "id", categoryId);
+
+            Area area = Area.create("서울특별시", "강남구", "역삼동");
+
+            ReflectionTestUtils.setField(area, "id", areaId);
+
+            Store store = Store.createStore(
+                    "교촌치킨 역삼점",
+                    "서울 강남구",
+                    storeOwner,
+                    category,
+                    area,
+                    true,
+                    LocalTime.of(9, 0),
+                    LocalTime.of(22, 0)
+            );
+
+            ReflectionTestUtils.setField(store, "id", storeId);
+
+            when(storeRepository.findByIdAndDeletedAtIsNull(storeId))
+                    .thenReturn(Optional.empty());
+
+            // when
+            ItsHereException exception =
+                    assertThrows(
+                            ItsHereException.class,
+                            () -> storeService.getOneStore(userDetails, storeId)
+                    );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.STORE_NOT_FOUND);
+
+            verify(storeRepository)
+                    .findByIdAndDeletedAtIsNull(storeId);
+
+        }
+
+        @Test
+        @DisplayName("다른 가게 주인인 경우")
+        void not_store_owner() {
+
+            // given
+            UUID storeId = UUID.randomUUID();
+            UUID categoryId = UUID.randomUUID();
+            UUID areaId = UUID.randomUUID();
+
+            UserEntity storeOwner = UserEntity.create(
+                    "owner1",
+                    "password",
+                    "사장1",
+                    UserRole.OWNER
+            );
+            ReflectionTestUtils.setField(storeOwner, "id", 1L);
+
+            // 다른 가게 주인
+            UserEntity loginUser = UserEntity.create(
+                    "owner2",
+                    "password",
+                    "사장2",
+                    UserRole.OWNER
+            );
+
+            ReflectionTestUtils.setField(loginUser, "id", 2L);
+
+            CustomUserDetails userDetails = new CustomUserDetails(loginUser);
+
+            Category category = Category.createCategory("야식", false);
+
+            ReflectionTestUtils.setField(category, "id", categoryId);
+
+            Area area = Area.create("서울특별시", "강남구", "역삼동");
+
+            ReflectionTestUtils.setField(area, "id", areaId);
+
+            Store store = Store.createStore(
+                    "교촌치킨 역삼점",
+                    "서울 강남구",
+                    storeOwner,
+                    category,
+                    area,
+                    true,
+                    LocalTime.of(9, 0),
+                    LocalTime.of(22, 0)
+            );
+
+            ReflectionTestUtils.setField(store, "id", storeId);
+
+            when(storeRepository.findByIdAndDeletedAtIsNull(storeId))
+                    .thenReturn(Optional.of(store));
+
+            // when
+            ItsHereException exception =
+                    assertThrows(
+                            ItsHereException.class,
+                            () -> storeService.getOneStore(userDetails, storeId)
+                    );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.STORE_NOT_OWNED);
+
+            verify(storeRepository)
+                    .findByIdAndDeletedAtIsNull(storeId);
+
+        }
+    }
+
+    @Nested
+    @DisplayName("가게 목록 조회")
+    class GetAllStores {
+
+        @Test
+        @DisplayName("성공")
+        void getAllStores_success() {
+
+            // given
+            Pageable pageable =
+                    PageRequest.of(0, 10, Sort.by("createdAt").ascending());
+
+            StoreGetAllResponseDto dto1 =
+                    new StoreGetAllResponseDto(
+                            UUID.randomUUID(),
+                            "교촌치킨 강남점",
+                            "치킨",
+                            "서울 강남구",
+                            "역삼동",
+                            4.5,
+                            true
+                    );
+
+            StoreGetAllResponseDto dto2 =
+                    new StoreGetAllResponseDto(
+                            UUID.randomUUID(),
+                            "교촌치킨 선릉점",
+                            "치킨",
+                            "서울 강남구",
+                            "삼성동",
+                            3.2,
+                            true
+                    );
+
+            Page<StoreGetAllResponseDto> page =
+                    new PageImpl<>(List.of(dto1, dto2), pageable, 2);
+
+            when(storeRepository.getAllStores(
+                    "교촌치킨",
+                    "치킨",
+                    pageable
+            )).thenReturn(page);
+
+            // when
+            Page<StoreGetAllResponseDto> result =
+                    storeService.getAllStores("교촌치킨", "치킨", pageable);
+
+            // then
+            assertThat(result).isEqualTo(page);
+
+            verify(storeRepository)
+                    .getAllStores("교촌치킨", "치킨", pageable);
+        }
+
+        @Test
+        @DisplayName("페이지 크기가 10,30,50이 아니면 10으로 변경")
+        void validatePageable_change_to_10() {
+
+            // given
+            Pageable pageable =
+                    PageRequest.of(
+                            1,
+                            20,
+                            Sort.by("createdAt").descending()
+                    );
+
+            // 빈 Page 반환
+            when(storeRepository.getAllStores(
+                    any(),
+                    any(),
+                    any(Pageable.class)
+            )).thenReturn(Page.empty());
+
+            // when
+            storeService.getAllStores("교촌치킨","치킨", pageable);
+
+            // then
+            ArgumentCaptor<Pageable> captor =
+                    ArgumentCaptor.forClass(Pageable.class);
+
+            verify(storeRepository)
+                    .getAllStores(
+                            eq("교촌치킨"),
+                            eq("치킨"),
+                            captor.capture()
+                    );
+
+            Pageable newPageable = captor.getValue();
+
+            assertThat(newPageable.getPageSize()).isEqualTo(10);
+            assertThat(newPageable.getPageNumber()).isEqualTo(1);
+            assertThat(newPageable.getSort()).isEqualTo(pageable.getSort());
+        }
+    }
+
+    @Test
+    @DisplayName("페이지 크기가 50이면 그대로 사용")
+    void validatePageable_size50() {
+
+        Pageable pageable =
+                PageRequest.of(0, 50);
+
+        when(storeRepository.getAllStores(
+                any(),
+                any(),
+                any(Pageable.class)
+        )).thenReturn(Page.empty());
+
+        storeService.getAllStores("교촌치킨","치킨", pageable);
+
+        ArgumentCaptor<Pageable> captor =
+                ArgumentCaptor.forClass(Pageable.class);
+
+        verify(storeRepository)
+                .getAllStores(
+                        eq("교촌치킨"),
+                        eq("치킨"),
+                        captor.capture()
+                );
+
+        assertThat(captor.getValue().getPageSize())
+                .isEqualTo(50);
     }
 
 }
