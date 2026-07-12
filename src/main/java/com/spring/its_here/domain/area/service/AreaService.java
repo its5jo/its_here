@@ -3,7 +3,6 @@ package com.spring.its_here.domain.area.service;
 
 import com.spring.its_here.domain.area.dto.request.AreaCreateRequestDto;
 import com.spring.its_here.domain.area.dto.request.AreaGetAllRequestDto;
-import com.spring.its_here.domain.area.dto.request.AreaGetOneRequestDto;
 import com.spring.its_here.domain.area.dto.request.AreaUpdateRequestDto;
 import com.spring.its_here.domain.area.dto.response.*;
 import com.spring.its_here.domain.area.entity.Area;
@@ -77,9 +76,6 @@ public class AreaService {
             AreaGetAllRequestDto areaGetAllRequestDto,
             Pageable pageable
     ) {
-        validatorSize(pageable.getPageSize());
-        validatorSortBy(pageable);
-
         Page<Area> areaPage = areaRepository.searchAreas(
                 areaGetAllRequestDto.city(),
                 areaGetAllRequestDto.district(),
@@ -117,14 +113,6 @@ public class AreaService {
 
     @Transactional
     public void deleteArea(UUID areaId) {
-
-    }
-
-    private void validatorSize(int size) {
-
-    }
-
-    private void validatorSortBy(Pageable pageable) {
 
     }
 }

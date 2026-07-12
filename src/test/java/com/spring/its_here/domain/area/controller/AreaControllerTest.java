@@ -34,12 +34,10 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-
-
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
@@ -89,7 +87,7 @@ class AreaControllerTest {
 
     @Nested
     @DisplayName("조회")
-    class get {
+    class getArea {
         @Test
         @DisplayName("단건조회 성공")
         void getOneArea_success() throws Exception {
@@ -168,6 +166,31 @@ class AreaControllerTest {
                     requestCaptor.capture(),
                     pageableCaptor.capture()
             );
+        }
+
+        @ParameterizedTest
+        @ValueSource(ints = {1, 20, 40, 100})
+        @DisplayName("조회개수가 10, 30, 50이 아니면 예외")
+        void getAllArea_invalid_size(int size) throws Exception {
+            mockMvc.perform(get("/api/areas")
+                            .param("size", String.valueOf(size))
+                            .param("sort", "createdAt, desc"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(ErrorCode.AREA_INVALID_SIZE.getCode()));
+
+            verify(areaService, never()).getAllArea(any(), any());
+        }
+
+        @Test
+        @DisplayName("정렬 기준이 createdAt이 아니면 예외")
+        void getAllArea_invalid_sort() throws Exception {
+            mockMvc.perform(get("/api/areas")
+                            .param("size", "10")
+                            .param("sort", "updatedAt, desc"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(ErrorCode.AREA_INVALID_SORT_BY.getCode()));
+
+            verify(areaService, never()).getAllArea(any(), any());
         }
     }
 }

@@ -5,10 +5,12 @@ import com.spring.its_here.domain.area.dto.request.AreaCreateRequestDto;
 import com.spring.its_here.domain.area.dto.request.AreaGetAllRequestDto;
 import com.spring.its_here.domain.area.dto.request.AreaUpdateRequestDto;
 import com.spring.its_here.domain.area.dto.response.AreaCreateResponseDto;
-import com.spring.its_here.domain.area.dto.response.AreaGetOneResponseDto;
 import com.spring.its_here.domain.area.dto.response.AreaGetAllResponseDto;
+import com.spring.its_here.domain.area.dto.response.AreaGetOneResponseDto;
 import com.spring.its_here.domain.area.dto.response.AreaUpdateResponseDto;
 import com.spring.its_here.domain.area.service.AreaService;
+import com.spring.its_here.global.advice.ErrorCode;
+import com.spring.its_here.global.advice.ItsHereException;
 import com.spring.its_here.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -58,6 +60,9 @@ public class AreaController {
             )
             Pageable pageable
     ) {
+        validatorSize(pageable.getPageSize());
+        validatorSortBy(pageable);
+
         AreaGetAllResponseDto areaGetAllResponseDto = areaService.getAllArea(
                 areaGetAllRequestDto,
                 pageable
@@ -82,5 +87,20 @@ public class AreaController {
     ) {
         areaService.deleteArea(areaId);
         return ResponseEntity.ok().build();
+    }
+
+
+    private void validatorSize(int size) {
+        if (size != 10 && size != 30 && size != 50) {
+            throw new ItsHereException(ErrorCode.AREA_INVALID_SIZE);
+        }
+    }
+
+    private void validatorSortBy(Pageable pageable) {
+        for (Sort.Order order : pageable.getSort()) {
+            if (!order.getProperty().equals("createdAt")) {
+                throw new ItsHereException(ErrorCode.AREA_INVALID_SORT_BY);
+            }
+        }
     }
 }

@@ -25,6 +25,8 @@ public enum ErrorCode {
 
     AREA_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 등록된 지역입니다.", "A-001"),
     AREA_NOT_FOUND(HttpStatus.NOT_FOUND, "지역을 찾을 수 없습니다.", "A-002"),
+    AREA_INVALID_SIZE(HttpStatus.BAD_REQUEST, "조회 개수는 10, 30, 50만 가능합니다.", "A-003"),
+    AREA_INVALID_SORT_BY(HttpStatus.BAD_REQUEST, "정렬 기준은 createdAt만 가능합니다.", "A-004"),
 
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 주문입니다.", "O-001"),
 
