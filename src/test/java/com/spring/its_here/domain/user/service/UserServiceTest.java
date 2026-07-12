@@ -366,6 +366,7 @@ class UserServiceTest {
     @Nested
     @DisplayName("내 정보 조회 API 테스트")
     class GetSelfTest {
+
         @Test
         @DisplayName("내 정보 조회 성공")
         void getSelf_success() {
@@ -400,16 +401,27 @@ class UserServiceTest {
         }
 
         @Test
-        @DisplayName("내 정보 조회 실패 - 사용자가 존재하지 않으면 예외가 발생")
-        void getSelf_fail_userNotFound() {
+        @DisplayName("내 정보 조회 실패 - 삭제된 사용자이면 예외가 발생")
+        void getSelf_fail_deletedUser() {
             // given
             Long userId = 1L;
+
+            UserEntity user = UserEntity.create(
+                    "testUser",
+                    "encodedPassword",
+                    "테스터",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(user, "id", userId);
+
+            user.hasDeleted(true);
 
             when(authenticationFacade.getCurrentUserId())
                     .thenReturn(userId);
 
             when(userRepository.findById(userId))
-                    .thenReturn(Optional.empty());
+                    .thenReturn(Optional.of(user));
 
             // when
             ItsHereException exception = assertThrows(
