@@ -40,7 +40,7 @@ public class ProductServiceImpl implements ProductService {
             throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
         }
 
-        Store store = storeRepository.findById(productCreateCommand.storeId()).orElseThrow(() -> new ItsHereException(ErrorCode.NOT_FOUND));
+        Store store = storeRepository.findById(productCreateCommand.storeId()).orElseThrow(() -> new ItsHereException(ErrorCode.STORE_NOT_FOUND));
 
         if (!loginUserId.equals(store.getUser().getId())) {
             log.warn("해당 가게의 소유자와 다름. userId={}, storeId={}", loginUserId, store.getId());
