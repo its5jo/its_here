@@ -2,6 +2,7 @@ package com.spring.its_here.domain.user.service;
 
 import com.spring.its_here.domain.user.dto.request.UserSignupRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserLoginRequestDto;
+import com.spring.its_here.domain.user.dto.request.UserUpdateRequestDto;
 import com.spring.its_here.domain.user.dto.response.TokenPairDto;
 import com.spring.its_here.domain.user.dto.response.UserResponseDto;
 import com.spring.its_here.domain.user.dto.response.UserSelfGetResponseDto;
@@ -426,11 +427,11 @@ class UserServiceTest {
     }
 
     @Nested
-    @DisplayName("회원 삭제 API 테스트")
+    @DisplayName("사용자 삭제 API 테스트")
     class DeleteTest {
 
         @Test
-        @DisplayName("회원 삭제 성공")
+        @DisplayName("사용자 정보 삭제 성공")
         void delete_success() {
             // given
             Long userId = 1L;
@@ -463,7 +464,7 @@ class UserServiceTest {
         }
 
         @Test
-        @DisplayName("회원 삭제 실패 - 다른 사용자를 삭제하려고 하면 예외가 발생")
+        @DisplayName("사용자 정보 삭제 실패 - 다른 사용자를 삭제하려고 하면 예외가 발생")
         void delete_fail_forbidden() {
             // given
             Long currentUserId = 1L;
@@ -500,6 +501,98 @@ class UserServiceTest {
 
             verify(authenticationFacade).getCurrentUserId();
             verify(userRepository).findById(currentUserId);
+        }
+    }
+
+    @Nested
+    @DisplayName("사용자 정보 수정 API 테스트")
+    class UpdateTest {
+
+        @Test
+        @DisplayName("사용자 정보 수정 성공")
+        void update_success() {
+            // given
+            Long userId = 1L;
+
+            UserEntity user = UserEntity.create(
+                    "testUser",
+                    "encodedPassword",
+                    "기존닉네임",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(user, "id", userId);
+
+            UserUpdateRequestDto request = new UserUpdateRequestDto(
+                    "NewPassword123!",
+                    "새닉네임"
+            );
+
+            when(authenticationFacade.getCurrentUserId())
+                    .thenReturn(userId);
+
+            when(userRepository.findById(userId))
+                    .thenReturn(Optional.of(user));
+
+            when(passwordEncoder.encode("NewPassword123!"))
+                    .thenReturn("encodedNewPassword");
+
+            // when
+            UserResponseDto response = userService.update(userId, request);
+
+            // then
+            assertThat(response.userId()).isEqualTo(userId);
+            assertThat(user.getPassword()).isEqualTo("encodedNewPassword");
+            assertThat(user.getNickname()).isEqualTo("새닉네임");
+
+            verify(authenticationFacade).getCurrentUserId();
+            verify(userRepository).findById(userId);
+            verify(passwordEncoder).encode("NewPassword123!");
+        }
+
+        @Test
+        @DisplayName("사용자 정보 수정 실패 - 다른 사용자의 정보를 수정하려고 하면 예외가 발생")
+        void update_fail_forbidden() {
+            // given
+            Long currentUserId = 1L;
+            Long targetUserId = 2L;
+
+            UserEntity user = UserEntity.create(
+                    "testUser",
+                    "encodedPassword",
+                    "테스터",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(user, "id", currentUserId);
+
+            UserUpdateRequestDto request = new UserUpdateRequestDto(
+                    "NewPassword123!",
+                    "새닉네임"
+            );
+
+            when(authenticationFacade.getCurrentUserId())
+                    .thenReturn(currentUserId);
+
+            when(userRepository.findById(currentUserId))
+                    .thenReturn(Optional.of(user));
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> userService.update(targetUserId, request)
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.AUTH_FORBIDDEN);
+
+            assertThat(user.getPassword()).isEqualTo("encodedPassword");
+            assertThat(user.getNickname()).isEqualTo("테스터");
+
+            verify(authenticationFacade).getCurrentUserId();
+            verify(userRepository).findById(currentUserId);
+            verify(passwordEncoder, never()).encode(anyString());
         }
     }
 }
