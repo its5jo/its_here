@@ -17,7 +17,7 @@ public record ErrorResponse(
     ) {
         return new ErrorResponse(
                 message,
-                errorCode == null ? null : errorCode.name(),
+                errorCode == null ? null : errorCode.getCode(),
                 details == null ? Map.of() : details,
                 Instant.now()
         );

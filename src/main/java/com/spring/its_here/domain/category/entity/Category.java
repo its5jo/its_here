@@ -1,6 +1,6 @@
 package com.spring.its_here.domain.category.entity;
 
-import com.spring.its_here.global.base.BaseEntity;
+import com.spring.its_here.global.base.BaseDeletableEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -12,7 +12,7 @@ import java.util.UUID;
 @Table(name = "p_category")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-public class Category extends BaseEntity {
+public class Category extends BaseDeletableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -25,12 +25,15 @@ public class Category extends BaseEntity {
     @Column(name = "has_hidden", nullable = false)
     private boolean hasHidden;
 
-    @Column(name = "has_deleted", nullable = false)
-    private boolean hasDeleted;
+    public static Category createCategory(
+            String name, boolean hasHidden
+    ) {
+        Category category = new Category();
 
-    public Category(String name, boolean hasHidden) {
-        this.name = name;
-        this.hasHidden = hasHidden;
-        this.hasDeleted = false;
+        category.name = name;
+        category.hasHidden = hasHidden;
+
+        return category;
     }
+
 }
