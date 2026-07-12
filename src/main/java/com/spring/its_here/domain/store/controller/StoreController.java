@@ -45,14 +45,14 @@ public class StoreController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<StoreGetAllPageData>> getAllStores(
+    public ResponseEntity<ApiResponse<StoreGetAllPageResponseDto>> getAllStores(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String category,
             Pageable pageable){
         Page<StoreGetAllResponseDto> responseDtoList = storeService.getAllStores(name, category, pageable);
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(ApiResponse.success("가게 목록 조회 성공", StoreGetAllPageData.from(responseDtoList)));
+                .body(ApiResponse.success("가게 목록 조회 성공", StoreGetAllPageResponseDto.from(responseDtoList)));
     }
 
     @PutMapping("/{storeId}")

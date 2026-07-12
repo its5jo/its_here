@@ -5,13 +5,13 @@ import org.springframework.data.domain.Page;
 
 import java.util.List;
 
-public record StoreGetAllPageData(
+public record StoreGetAllPageResponseDto(
         List<StoreGetAllResponseDto> content,
         PageInfo pageInfo
 ) {
 
-    public static StoreGetAllPageData from(Page<StoreGetAllResponseDto> page) {
-        return new StoreGetAllPageData(
+    public static StoreGetAllPageResponseDto from(Page<StoreGetAllResponseDto> page) {
+        return new StoreGetAllPageResponseDto(
                 page.getContent(),
                 PageInfo.from(page)
         );
