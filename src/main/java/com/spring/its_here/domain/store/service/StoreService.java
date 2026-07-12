@@ -19,6 +19,7 @@ import com.spring.its_here.global.advice.ItsHereException;
 import com.spring.its_here.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -71,9 +72,11 @@ public class StoreService {
                 store.getHasOpen(), store.getOpenAt(), store.getClosedAt());
     }
 
+    @PreAuthorize("hasAnyAuthority('MANAGER','MASTER')")
     @Transactional(readOnly = true)
     public Page<StoreGetAllResponseDto> getAllStores(String name, String category, Pageable pageable) {
-        return null;
+        Pageable newPageable = validatePageable(pageable);
+        return storeRepository.getAllStores(name, category, newPageable);
     }
 
     @Transactional
@@ -101,6 +104,20 @@ public class StoreService {
         if(user.getRole() == UserRole.OWNER && !user.getId().equals(storeOwnerId)){
             throw new ItsHereException(ErrorCode.STORE_NOT_OWNED);
         }
+    }
+
+    private Pageable validatePageable(Pageable pageable) {
+        int size = pageable.getPageSize();
+
+        if (size == 10 || size == 30 || size == 50) {
+            return pageable;
+        }
+
+        return PageRequest.of(
+                pageable.getPageNumber(),
+                10,
+                pageable.getSort()
+        );
     }
 
     private void existsDuplicateStoreName(String name) {

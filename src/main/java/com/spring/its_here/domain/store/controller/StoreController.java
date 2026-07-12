@@ -2,10 +2,7 @@ package com.spring.its_here.domain.store.controller;
 
 import com.spring.its_here.domain.store.dto.request.StoreCreateRequestDto;
 import com.spring.its_here.domain.store.dto.request.StoreUpdateRequestDto;
-import com.spring.its_here.domain.store.dto.response.StoreCreateResponseDto;
-import com.spring.its_here.domain.store.dto.response.StoreGetAllResponseDto;
-import com.spring.its_here.domain.store.dto.response.StoreGetOneResponseDto;
-import com.spring.its_here.domain.store.dto.response.StoreUpdateResponseDto;
+import com.spring.its_here.domain.store.dto.response.*;
 import com.spring.its_here.domain.store.service.StoreService;
 import com.spring.its_here.global.response.ApiResponse;
 import com.spring.its_here.global.security.CustomUserDetails;
@@ -48,14 +45,14 @@ public class StoreController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<StoreGetAllResponseDto>>> getAllStores(
+    public ResponseEntity<ApiResponse<StoreGetAllPageData>> getAllStores(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String category,
             Pageable pageable){
         Page<StoreGetAllResponseDto> responseDtoList = storeService.getAllStores(name, category, pageable);
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(ApiResponse.success("가게 목록 조회 성공", responseDtoList));
+                .body(ApiResponse.success("가게 목록 조회 성공", StoreGetAllPageData.from(responseDtoList)));
     }
 
     @PutMapping("/{storeId}")
