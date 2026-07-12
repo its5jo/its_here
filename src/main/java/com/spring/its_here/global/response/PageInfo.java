@@ -5,8 +5,8 @@ import org.springframework.data.domain.Sort;
 
 public record PageInfo(
         String paginationType,
-        boolean hasNext,
-        long totalCount,
+        Boolean hasNext,
+        Long totalCount,
         String sortBy,
         String sortDirection
 ) {
