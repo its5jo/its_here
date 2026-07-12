@@ -146,4 +146,19 @@ public class UserController {
                         userService.create(userCreateRequestDto)
                 ));
     }
+
+    @Operation(
+            summary = "사용자 삭제",
+            description = "권한이 있는 사용자가 본인의 정보를 삭제합니다."
+    )
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<Void> deleteUser(
+            @PathVariable Long userId
+    ) {
+        userService.delete(userId);
+
+        return ResponseEntity
+                .noContent()
+                .build();
+    }
 }

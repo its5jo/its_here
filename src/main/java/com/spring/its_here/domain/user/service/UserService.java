@@ -176,4 +176,19 @@ public class UserService {
 
         return new UserResponseDto(newManager.getId());
     }
+
+    @Transactional
+    public void delete(Long userId) {
+        // 현재 인증된 사용자
+        UserEntity currentUser = getCurrentUser();
+
+        // 다른 유저를 삭제 요청할 경우
+        if (!currentUser.getId().equals(userId)) {
+            throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
+        }
+
+        // Soft Delete 진행 및 감사 필드 작성
+        currentUser.delete(userId);
+        currentUser.hasDeleted(true);
+    }
 }

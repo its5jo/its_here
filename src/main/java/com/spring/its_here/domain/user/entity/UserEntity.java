@@ -46,4 +46,8 @@ public class UserEntity extends BaseDeletableEntity {
                 false
         );
     }
+
+    public void hasDeleted(Boolean hasDeleted) {
+        this.hasDeleted = hasDeleted;
+    }
 }
