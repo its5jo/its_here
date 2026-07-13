@@ -119,8 +119,8 @@ public class ProductServiceImpl implements ProductService {
             log.warn("상품 삭제 권한 없음. userId={}, productId={}, storeId={}",
                     loginUserId,
                     product.getId(),
-                    product.getStore().getId())
-            ;
+                    product.getStore().getId()
+            );
             throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
         }
 

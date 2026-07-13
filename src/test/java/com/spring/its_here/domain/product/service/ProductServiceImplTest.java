@@ -28,6 +28,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,6 +50,7 @@ class ProductServiceImplTest {
     private ProductServiceImpl productService;
 
     @Nested
+    @DisplayName("상품 생성")
     class CreateProductTest {
 
 
@@ -151,6 +153,7 @@ class ProductServiceImplTest {
     }
 
     @Nested
+    @DisplayName("상품 단일 조회")
     class GetProductTest {
 
         @Test
@@ -205,5 +208,37 @@ class ProductServiceImplTest {
 
             verify(productRepository).findById(productId);
         }
+    }
+
+    @Nested
+    @DisplayName("상품 삭제")
+    class DeleteProductTest {
+
+        @Test
+        @DisplayName("가게 소유자인 OWNER는 상품을 삭제할 수 있다")
+        void deleteProduct_success() {
+            // given
+            Long loginUserId = 1L;
+            UUID productId = UUID.randomUUID();
+            UserEntity owner = mock(UserEntity.class);
+            Product product = mock(Product.class);
+            Store store = mock(Store.class);
+
+            given(userRepository.findById(loginUserId))
+                    .willReturn(Optional.of(owner));
+            given(productRepository.findById(productId))
+                    .willReturn(Optional.of(product));
+            given(owner.getRole()).willReturn(UserRole.OWNER);
+            given(product.getStore()).willReturn(store);
+            given(store.getUser()).willReturn(owner);
+            given(owner.getId()).willReturn(loginUserId);
+
+            // when
+            productService.deleteProduct(productId, loginUserId);
+
+            // then
+            verify(product).delete(loginUserId);
+        }
+
     }
 }
