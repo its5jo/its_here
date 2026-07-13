@@ -17,7 +17,7 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
             SELECT r
             FROM Review r
             WHERE r.deletedAt IS NULL
-            AND r.store.id = :storeId
+            AND (:storeId IS NULL OR r.store.id = :storeId)
             AND (:rating IS NULL OR r.rating = :rating)
             """)
     Page<Review> searchReviews(

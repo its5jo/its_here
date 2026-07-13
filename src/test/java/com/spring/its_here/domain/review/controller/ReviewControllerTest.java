@@ -33,6 +33,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
@@ -274,10 +275,14 @@ class ReviewControllerTest {
                             .param("size", String.valueOf(size)))
                     .andExpect(status().isOk());
 
+            ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
             verify(reviewService).getAllReview(
                     any(ReviewGetAllRequestDto.class),
-                    any(Pageable.class)
+                    pageableCaptor.capture()
             );
+
+            assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(10);
         }
 
         @Test
