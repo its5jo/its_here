@@ -102,7 +102,21 @@ public class AddressService {
 
     @PreAuthorize("hasAuthority('CUSTOMER')")
     @Transactional
-    public void delete(UUID addressId) {}
+    public void delete(UUID addressId) {
+        // 현재 인증된 사용자 반환
+        UserEntity currentUser = getCurrentUser();
+
+        // 삭제된 주소인지 확인
+        Address address = addressRepository.findByIdAndDeletedAtNull(addressId)
+                .orElseThrow(() -> new ItsHereException(ErrorCode.ADDRESS_NOT_FOUND));
+
+        // 주소를 생성한 사용자가 맞는지 확인
+        if (!address.getUser().getId().equals(currentUser.getId())) {
+            throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
+        }
+
+        address.delete(currentUser.getId());
+    }
 
     @PreAuthorize("hasAuthority('CUSTOMER')")
     @Transactional(readOnly = true)
