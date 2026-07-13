@@ -97,16 +97,13 @@ class StoreRepositoryTest {
 
         // given
         Category category = createCategory("양식" , false);
-        category.assignCreatedBy(userDetails.getUserId());
 
         Area area = createArea("서울특별시", "강남구", "역삼동");
-        area.assignCreatedBy(userDetails.getUserId());
 
         Store store = createStore(
                 category,
                 area
         );
-        store.assignCreatedBy(userDetails.getUserId());
 
         // when
         Page<StoreGetAllResponseDto> result =
@@ -139,16 +136,13 @@ class StoreRepositoryTest {
 
         // given
         Category category = createCategory("양식" , false);
-        category.assignCreatedBy(userDetails.getUserId());
 
         Area area = createArea("서울특별시", "강남구", "역삼동");
-        area.assignCreatedBy(userDetails.getUserId());
 
         Store store = createStore(
                 category,
                 area
         );
-        store.assignCreatedBy(userDetails.getUserId());
 
         store.delete(userDetails.getUserId()); // 가게 삭제
 
@@ -214,7 +208,6 @@ class StoreRepositoryTest {
                 category,
                 area
         );
-        store.assignCreatedBy(userDetails.getUserId());
 
         // when
         Page<StoreGetAllResponseDto> result =

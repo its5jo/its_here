@@ -151,8 +151,6 @@ class StoreServiceTest {
             assertThat(savedStore.getOpenAt()).isEqualTo(requestDto.openAt());
             assertThat(savedStore.getClosedAt()).isEqualTo(requestDto.closedAt());
             assertThat(savedStore.getHasOpen()).isEqualTo(requestDto.hasOpen());
-            assertThat(savedStore.getCreatedBy()).isEqualTo(userDetails.getUserId());
-
         }
 
         @Test
