@@ -1,8 +1,10 @@
 package com.spring.its_here.domain.product.service;
 
 import com.spring.its_here.domain.product.dto.command.ProductCreateCommand;
+import com.spring.its_here.domain.product.dto.command.ProductUpdateCommand;
 import com.spring.its_here.domain.product.dto.response.ProductCreateResponseDto;
 import com.spring.its_here.domain.product.dto.response.ProductResponseDto;
+import com.spring.its_here.domain.product.dto.response.ProductUpdateResponseDto;
 import com.spring.its_here.domain.product.entity.Product;
 import com.spring.its_here.domain.product.repository.ProductRepository;
 import com.spring.its_here.domain.store.entity.Store;
@@ -334,5 +336,218 @@ class ProductServiceImplTest {
             verify(product, never()).delete(anyLong());
         }
 
+    }
+
+    @Nested
+    @DisplayName("상품 수정")
+    class UpdateProductTest {
+
+        @Test
+        @DisplayName("가게 소유자인 OWNER는 상품을 수정할 수 있다")
+        void updateProduct_success() {
+            // given
+            Long loginUserId = 1L;
+            UUID productId = UUID.randomUUID();
+
+            UserEntity owner = mock(UserEntity.class);
+            Store store = mock(Store.class);
+            Product product = mock(Product.class);
+
+            ProductUpdateCommand command = new ProductUpdateCommand(
+                    productId,
+                    "카페라떼",
+                    "고소한 우유가 들어간 커피",
+                    false,
+                    5_000,
+                    "/images/latte.jpg"
+            );
+
+            when(userRepository.findById(loginUserId))
+                    .thenReturn(Optional.of(owner));
+            when(owner.getRole()).thenReturn(UserRole.OWNER);
+
+            when(productRepository.findById(productId))
+                    .thenReturn(Optional.of(product));
+            when(product.getStore()).thenReturn(store);
+            when(store.getUser()).thenReturn(owner);
+            when(owner.getId()).thenReturn(loginUserId);
+            when(product.getId()).thenReturn(productId);
+
+            // when
+            ProductUpdateResponseDto response =
+                    productService.updateProduct(command, loginUserId);
+
+            // then
+            assertThat(response.productId()).isEqualTo(productId);
+
+            verify(userRepository).findById(loginUserId);
+            verify(productRepository).findById(productId);
+
+            verify(product).update(
+                    "카페라떼",
+                    "고소한 우유가 들어간 커피",
+                    false,
+                    5_000,
+                    "/images/latte.jpg"
+            );
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 사용자는 상품을 수정할 수 없다")
+        void updateProduct_fail_userNotFound() {
+            // given
+            Long loginUserId = 1L;
+            UUID productId = UUID.randomUUID();
+
+            ProductUpdateCommand command = new ProductUpdateCommand(
+                    productId,
+                    "카페라떼",
+                    "고소한 우유가 들어간 커피",
+                    false,
+                    5_000,
+                    null
+            );
+
+            when(userRepository.findById(loginUserId))
+                    .thenReturn(Optional.empty());
+
+            // when & then
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> productService.updateProduct(command, loginUserId)
+            );
+
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.USER_NOT_FOUND);
+
+            verify(userRepository).findById(loginUserId);
+            verify(productRepository, never()).findById(any());
+        }
+
+        @Test
+        @DisplayName("OWNER가 아니면 상품을 수정할 수 없다")
+        void updateProduct_fail_notOwner() {
+            // given
+            Long loginUserId = 1L;
+            UUID productId = UUID.randomUUID();
+
+            UserEntity customer = mock(UserEntity.class);
+
+            ProductUpdateCommand command = new ProductUpdateCommand(
+                    productId,
+                    "카페라떼",
+                    "고소한 우유가 들어간 커피",
+                    false,
+                    5_000,
+                    null
+            );
+
+            when(userRepository.findById(loginUserId))
+                    .thenReturn(Optional.of(customer));
+            when(customer.getRole()).thenReturn(UserRole.CUSTOMER);
+
+            // when & then
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> productService.updateProduct(command, loginUserId)
+            );
+
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.AUTH_FORBIDDEN);
+
+            verify(userRepository).findById(loginUserId);
+            verify(productRepository, never()).findById(any());
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 상품이면 예외가 발생한다")
+        void updateProduct_fail_productNotFound() {
+            // given
+            Long loginUserId = 1L;
+            UUID productId = UUID.randomUUID();
+
+            UserEntity owner = mock(UserEntity.class);
+
+            ProductUpdateCommand command = new ProductUpdateCommand(
+                    productId,
+                    "카페라떼",
+                    "고소한 우유가 들어간 커피",
+                    false,
+                    5_000,
+                    null
+            );
+
+            when(userRepository.findById(loginUserId))
+                    .thenReturn(Optional.of(owner));
+            when(owner.getRole()).thenReturn(UserRole.OWNER);
+
+            when(productRepository.findById(productId))
+                    .thenReturn(Optional.empty());
+
+            // when & then
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> productService.updateProduct(command, loginUserId)
+            );
+
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
+
+            verify(userRepository).findById(loginUserId);
+            verify(productRepository).findById(productId);
+        }
+
+        @Test
+        @DisplayName("상품이 속한 가게의 소유자가 아니면 상품을 수정할 수 없다")
+        void updateProduct_fail_notStoreOwner() {
+            // given
+            Long loginUserId = 1L;
+            Long storeOwnerId = 2L;
+            UUID productId = UUID.randomUUID();
+
+            UserEntity loginUser = mock(UserEntity.class);
+            UserEntity storeOwner = mock(UserEntity.class);
+            Store store = mock(Store.class);
+            Product product = mock(Product.class);
+
+            ProductUpdateCommand command = new ProductUpdateCommand(
+                    productId,
+                    "카페라떼",
+                    "고소한 우유가 들어간 커피",
+                    false,
+                    5_000,
+                    null
+            );
+
+            when(userRepository.findById(loginUserId))
+                    .thenReturn(Optional.of(loginUser));
+            when(loginUser.getRole()).thenReturn(UserRole.OWNER);
+
+            when(productRepository.findById(productId))
+                    .thenReturn(Optional.of(product));
+            when(product.getStore()).thenReturn(store);
+            when(store.getUser()).thenReturn(storeOwner);
+            when(storeOwner.getId()).thenReturn(storeOwnerId);
+
+            // when & then
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> productService.updateProduct(command, loginUserId)
+            );
+
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.AUTH_FORBIDDEN);
+
+            verify(userRepository).findById(loginUserId);
+            verify(productRepository).findById(productId);
+
+            verify(product, never()).update(
+                    anyString(),
+                    anyString(),
+                    anyBoolean(),
+                    anyInt(),
+                    any()
+            );
+        }
     }
 }
