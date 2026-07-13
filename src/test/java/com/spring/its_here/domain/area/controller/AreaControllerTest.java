@@ -9,6 +9,7 @@ import com.spring.its_here.domain.area.service.AreaService;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
 import com.spring.its_here.global.config.SecurityConfig;
+import com.spring.its_here.global.response.OffsetPageInfo;
 import com.spring.its_here.global.security.CustomUserDetailsService;
 import com.spring.its_here.global.security.JwtProvider;
 import org.junit.jupiter.api.DisplayName;
