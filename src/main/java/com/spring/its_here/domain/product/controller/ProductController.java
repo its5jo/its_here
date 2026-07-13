@@ -2,9 +2,12 @@ package com.spring.its_here.domain.product.controller;
 
 import com.spring.its_here.domain.product.controller.docs.ProductApi;
 import com.spring.its_here.domain.product.dto.command.ProductCreateCommand;
+import com.spring.its_here.domain.product.dto.command.ProductUpdateCommand;
 import com.spring.its_here.domain.product.dto.request.ProductCreateRequestDto;
+import com.spring.its_here.domain.product.dto.request.ProductUpdateRequestDto;
 import com.spring.its_here.domain.product.dto.response.ProductCreateResponseDto;
 import com.spring.its_here.domain.product.dto.response.ProductResponseDto;
+import com.spring.its_here.domain.product.dto.response.ProductUpdateResponseDto;
 import com.spring.its_here.domain.product.service.ProductService;
 import com.spring.its_here.global.response.ApiResponse;
 import com.spring.its_here.global.security.CustomUserDetails;
@@ -44,8 +47,21 @@ public class ProductController implements ProductApi {
     }
 
     @PutMapping("/products/{productId}")
-    public ResponseEntity<Void> updateProduct(@PathVariable UUID productId) {
-        return ResponseEntity.ok().build();
+    public ResponseEntity<ApiResponse<ProductUpdateResponseDto>> updateProduct(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID productId,
+            @RequestBody ProductUpdateRequestDto request
+    ) {
+        ProductUpdateResponseDto productUpdateResponseDto = productService.updateProduct(
+                        ProductUpdateCommand.of(request, productId),
+                        userDetails.getUserId()
+                );
+        return ResponseEntity.ok().body(
+                ApiResponse.success(
+                        "상품 수정 성공",
+                        productUpdateResponseDto
+                )
+        );
     }
 
     @DeleteMapping("/products/{productId}")
