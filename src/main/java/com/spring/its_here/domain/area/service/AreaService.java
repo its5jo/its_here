@@ -93,14 +93,12 @@ public class AreaService {
                         area.getTown(),
                         area.isHasAvailable()
                 )).toList();
-        AreaPageInfoResponseDto pageInfo = new AreaPageInfoResponseDto(
-                areaPage.getNumber(),
-                areaPage.getSize(),
-                areaPage.getTotalElements(),
-                areaPage.getTotalPages(),
-                areaPage.hasNext()
+        PageInfo pageInfo = PageInfo.from(areaPage);
+
+        return new AreaGetAllResponseDto(
+                content,
+                pageInfo
         );
-        return new AreaGetAllResponseDto(content, pageInfo);
     }
 
     @Transactional

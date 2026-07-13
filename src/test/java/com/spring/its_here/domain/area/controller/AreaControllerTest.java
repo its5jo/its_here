@@ -5,7 +5,6 @@ import com.spring.its_here.domain.area.dto.request.AreaGetAllRequestDto;
 import com.spring.its_here.domain.area.dto.response.AreaGetAllItemResponseDto;
 import com.spring.its_here.domain.area.dto.response.AreaGetAllResponseDto;
 import com.spring.its_here.domain.area.dto.response.AreaGetOneResponseDto;
-import com.spring.its_here.domain.area.dto.response.AreaPageInfoResponseDto;
 import com.spring.its_here.domain.area.service.AreaService;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
@@ -137,16 +136,17 @@ class AreaControllerTest {
                     "town",
                     true
             );
-            AreaPageInfoResponseDto pageInfoResponseDto = new AreaPageInfoResponseDto(
-                    0,
-                    10,
-                    1,
-                    1,
-                    true
+            PageInfo pageInfo = new PageInfo(
+                    "OFFSET",
+                    false,
+                    1L,
+                    "createdAt",
+                    "DESC"
             );
+
             AreaGetAllResponseDto areaGetAllResponseDto = new AreaGetAllResponseDto(
                     List.of(areaGetAllItemResponseDto),
-                    pageInfoResponseDto
+                    pageInfo
             );
 
             given(areaService.getAllArea(
@@ -157,7 +157,16 @@ class AreaControllerTest {
             mockMvc.perform(get("/api/areas"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.message").value("서비스 지역 전체 조회 성공"))
-                    .andExpect(jsonPath("$.code").value("SUCCESS"));
+                    .andExpect(jsonPath("$.code").value("SUCCESS"))
+                    .andExpect(jsonPath("$.data.content[0].city").value("city"))
+                    .andExpect(jsonPath("$.data.content[0].district").value("district"))
+                    .andExpect(jsonPath("$.data.content[0].town").value("town"))
+                    .andExpect(jsonPath("$.data.content[0].hasAvailable").value(true))
+                    .andExpect(jsonPath("$.data.pageInfo.paginationType").value("OFFSET"))
+                    .andExpect(jsonPath("$.data.pageInfo.hasNext").value(false))
+                    .andExpect(jsonPath("$.data.pageInfo.totalCount").value(1))
+                    .andExpect(jsonPath("$.data.pageInfo.sortBy").value("createdAt"))
+                    .andExpect(jsonPath("$.data.pageInfo.sortDirection").value("DESC"));
 
             ArgumentCaptor<AreaGetAllRequestDto> requestCaptor = ArgumentCaptor.forClass(AreaGetAllRequestDto.class);
             ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
@@ -172,15 +181,16 @@ class AreaControllerTest {
         @ValueSource(ints = {1, 20, 40, 100})
         @DisplayName("조회개수가 10, 30, 50이 아니면 10건으로 조회")
         void getAllArea_invalid_size(int size) throws Exception {
+            PageInfo pageInfo = new PageInfo(
+                    "OFFSET",
+                    false,
+                    0L,
+                    "createdAt",
+                    "DESC"
+            );
             AreaGetAllResponseDto areaGetAllResponseDto = new AreaGetAllResponseDto(
                     List.of(),
-                    new AreaPageInfoResponseDto(
-                            0,
-                            10,
-                            0,
-                            0,
-                            false
-                    )
+                    pageInfo
             );
 
             given(areaService.getAllArea(
@@ -190,8 +200,7 @@ class AreaControllerTest {
 
             mockMvc.perform(get("/api/areas")
                             .param("size", String.valueOf(size)))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data.pageInfo.size").value(10));
+                    .andExpect(status().isOk());
 
             verify(areaService).getAllArea(
                     any(AreaGetAllRequestDto.class),
