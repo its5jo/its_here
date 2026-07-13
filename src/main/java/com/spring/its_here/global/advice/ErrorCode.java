@@ -38,6 +38,7 @@ public enum ErrorCode {
     STORE_NOT_FOUND(HttpStatus.NOT_FOUND, "가게가 존재하지 않습니다.", "S-001"),
     STORE_NAME_DUPLICATE(HttpStatus.CONFLICT, "동일한 이름의 가게가 존재합니다.", "S-002"),
     STORE_ALREADY_REGISTERED(HttpStatus.CONFLICT, "이미 등록한 가게가 존재합니다.", "S-003"),
+    STORE_NOT_OWNED(HttpStatus.FORBIDDEN, "가게 접근 권한이 없습니다.", "S-004"),
 
     REVIEW_CONTENT_VALID(HttpStatus.BAD_REQUEST, "리뷰내용 255자 이하입니다", "R-001"),
     REVIEW_FORBIDDEN(HttpStatus.NOT_FOUND, "리뷰작성 권한이 없습니다.", "R-002"),
@@ -45,9 +46,7 @@ public enum ErrorCode {
     REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 존재하는 리뷰입니다.", "R-004"),
 
     // product
-    PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "상품이 존재하지 않습니다.", "P-001")
-
-    ;
+    PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "상품이 존재하지 않습니다.", "P-001");
 
     private final String message;
     private final HttpStatus status;
