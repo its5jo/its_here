@@ -32,6 +32,10 @@ jobs:
         run: chmod +x gradlew
 
       - name: 빌드 및 테스트
+        env:
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          JWT_ACCESSTOKEN_EXPIRATION: ${{ secrets.JWT_ACCESSTOKEN_EXPIRATION }}
+          JWT_REFRESHTOKEN_EXPIRATION: ${{ secrets.JWT_REFRESHTOKEN_EXPIRATION }}
         run: ./gradlew build --no-daemon
 
       - name: 테스트 리포트 업로드
