@@ -550,6 +550,83 @@ class StoreServiceTest {
                     .findByIdAndDeletedAtIsNull(storeId);
 
         }
+
+        @Test
+        @DisplayName("삭제된 지역, 카테고리는 이름 뒤에 (삭제됨) 추가")
+        void deleted_area_category() {
+
+            // given
+
+            UUID storeId = UUID.randomUUID();
+            UUID categoryId = UUID.randomUUID();
+            UUID areaId = UUID.randomUUID();
+
+            UserEntity user = UserEntity.create(
+                    "test1",
+                    "password",
+                    "닉네임",
+                    UserRole.OWNER
+            );
+
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            CustomUserDetails userDetails =
+                    new CustomUserDetails(user);
+
+            Category category = Category.createCategory("야식", false);
+
+            ReflectionTestUtils.setField(category, "id", categoryId);
+
+            category.delete(user.getId());
+
+            Area area = Area.create("서울특별시", "강남구", "역삼동");
+
+            ReflectionTestUtils.setField(area, "id", areaId);
+
+            area.delete(user.getId());
+
+            Store store = Store.createStore(
+                    "교촌치킨 역삼점",
+                    "서울 강남구",
+                    user,
+                    category,
+                    area,
+                    true,
+                    LocalTime.of(9, 0),
+                    LocalTime.of(22, 0)
+            );
+
+            ReflectionTestUtils.setField(store, "id", storeId);
+
+            when(storeRepository.findByIdAndDeletedAtIsNull(storeId))
+                    .thenReturn(Optional.of(store));
+
+            // when
+            StoreGetOneResponseDto responseDto =
+                    storeService.getOneStore(userDetails, storeId);
+
+            // then
+
+            assertThat(responseDto).isNotNull();
+            assertThat(responseDto.name()).isEqualTo(store.getName());
+            assertThat(responseDto.address()).isEqualTo(store.getAddress());
+            assertThat(responseDto.category()).isEqualTo(category.getName() + "(삭제됨)");
+            assertThat(responseDto.area()).isEqualTo(area.getTown() + "(삭제됨)");
+            assertThat(responseDto.rating()).isEqualTo(0.0);
+            assertThat(responseDto.hasOpen()).isEqualTo(store.getHasOpen());
+            assertThat(responseDto.openAt()).isEqualTo(store.getOpenAt());
+            assertThat(responseDto.closedAt()).isEqualTo(store.getClosedAt());
+
+            verify(storeRepository)
+                    .findByIdAndDeletedAtIsNull(storeId);
+
+            // 추가 Repository 호출이 없는지 검증
+            verifyNoMoreInteractions(
+                    storeRepository,
+                    categoryRepository,
+                    areaRepository
+            );
+        }
     }
 
     @Nested
