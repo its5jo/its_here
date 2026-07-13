@@ -13,4 +13,5 @@ public interface StoreRepository extends JpaRepository<Store, UUID>, StoreReposi
 
     Optional<Store> findByUserIdAndDeletedAtIsNull(Long userId);
 
+    Optional<Store> findByIdAndDeletedAtIsNull(UUID storeId);
 }

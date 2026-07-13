@@ -18,6 +18,12 @@ public class AuthenticationFacade {
             throw new ItsHereException(ErrorCode.AUTH_UNAUTHORIZED);
         }
 
+        Object principal = authentication.getPrincipal();
+
+        if (!(principal instanceof CustomUserDetails userDetails)) {
+            throw new ItsHereException(ErrorCode.AUTH_UNAUTHORIZED);
+        }
+
         return (CustomUserDetails) authentication.getPrincipal();
     }
 
