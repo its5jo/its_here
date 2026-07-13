@@ -28,7 +28,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -224,20 +223,115 @@ class ProductServiceImplTest {
             Product product = mock(Product.class);
             Store store = mock(Store.class);
 
-            given(userRepository.findById(loginUserId))
-                    .willReturn(Optional.of(owner));
-            given(productRepository.findById(productId))
-                    .willReturn(Optional.of(product));
-            given(owner.getRole()).willReturn(UserRole.OWNER);
-            given(product.getStore()).willReturn(store);
-            given(store.getUser()).willReturn(owner);
-            given(owner.getId()).willReturn(loginUserId);
+            when(userRepository.findById(loginUserId))
+                    .thenReturn(Optional.of(owner));
+            when(productRepository.findById(productId))
+                    .thenReturn(Optional.of(product));
+            when(owner.getRole()).thenReturn(UserRole.OWNER);
+            when(product.getStore()).thenReturn(store);
+            when(store.getUser()).thenReturn(owner);
+            when(owner.getId()).thenReturn(loginUserId);
 
             // when
             productService.deleteProduct(productId, loginUserId);
 
             // then
             verify(product).delete(loginUserId);
+        }
+
+        @Test
+        @DisplayName("OWNER가 아니면 상품을 삭제할 수 없다")
+        void deleteProduct_fail_notOwner() {
+
+            // given
+            Long loginUserId = 1L;
+            UUID productId = UUID.randomUUID();
+
+            UserEntity user = mock(UserEntity.class);
+
+            when(userRepository.findById(loginUserId))
+                    .thenReturn(Optional.of(user));
+            when(user.getRole()).thenReturn(UserRole.CUSTOMER);
+
+            // when & then
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> productService.deleteProduct(productId, loginUserId)
+            );
+
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.AUTH_FORBIDDEN);
+
+            verify(userRepository).findById(loginUserId);
+            verify(productRepository, never()).findById(any());
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 상품이면 예외가 발생한다")
+        void deleteProduct_fail_productNotFound() {
+
+            // given
+            Long loginUserId = 1L;
+            UUID productId = UUID.randomUUID();
+
+            UserEntity owner = mock(UserEntity.class);
+
+            when(userRepository.findById(loginUserId))
+                    .thenReturn(Optional.of(owner));
+            when(owner.getRole()).thenReturn(UserRole.OWNER);
+
+            when(productRepository.findById(productId))
+                    .thenReturn(Optional.empty());
+
+            // when & then
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> productService.deleteProduct(productId, loginUserId)
+            );
+
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
+
+            verify(userRepository).findById(loginUserId);
+            verify(productRepository).findById(productId);
+        }
+
+        @Test
+        @DisplayName("상품 소유자가 아니면 삭제할 수 없다")
+        void deleteProduct_fail_notProductOwner() {
+
+            // given
+            Long loginUserId = 1L;
+            Long ownerId = 2L;
+            UUID productId = UUID.randomUUID();
+
+            UserEntity loginUser = mock(UserEntity.class);
+            UserEntity owner = mock(UserEntity.class);
+            Product product = mock(Product.class);
+            Store store = mock(Store.class);
+
+            when(userRepository.findById(loginUserId))
+                    .thenReturn(Optional.of(loginUser));
+            when(loginUser.getRole()).thenReturn(UserRole.OWNER);
+
+            when(productRepository.findById(productId))
+                    .thenReturn(Optional.of(product));
+            when(product.getStore()).thenReturn(store);
+            when(store.getUser()).thenReturn(owner);
+            when(owner.getId()).thenReturn(ownerId);
+
+            // when & then
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> productService.deleteProduct(productId, loginUserId)
+            );
+
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.AUTH_FORBIDDEN);
+
+            verify(userRepository).findById(loginUserId);
+            verify(productRepository).findById(productId);
+            verify(product, never()).delete(anyLong());
         }
 
     }
