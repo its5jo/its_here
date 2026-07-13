@@ -100,6 +100,13 @@ public class ProductServiceImpl implements ProductService {
                 productUpdateCommand.price(),
                 productUpdateCommand.imageUrl()
         );
+
+        log.info(
+                "상품 수정 처리 요청 완료. productId={}, storeId={}, userId={}",
+                product.getId(),
+                product.getStore().getId(),
+                loginUserId
+        );
         return new ProductUpdateResponseDto(product.getId());
     }
 
