@@ -26,7 +26,6 @@ public class CategoryService {
         validateCategoryCreate(requestDto);
 
         Category category = Category.createCategory(requestDto.name(), requestDto.hasHidden());
-        category.assignCreatedBy(userDetails.getUserId());
 
         Category savedCategory = categoryRepository.save(category);
         return new CategoryCreateResponseDto(savedCategory.getId());

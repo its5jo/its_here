@@ -2,10 +2,7 @@ package com.spring.its_here.domain.store.controller;
 
 import com.spring.its_here.domain.store.dto.request.StoreCreateRequestDto;
 import com.spring.its_here.domain.store.dto.request.StoreUpdateRequestDto;
-import com.spring.its_here.domain.store.dto.response.StoreCreateResponseDto;
-import com.spring.its_here.domain.store.dto.response.StoreGetAllResponseDto;
-import com.spring.its_here.domain.store.dto.response.StoreGetOneResponseDto;
-import com.spring.its_here.domain.store.dto.response.StoreUpdateResponseDto;
+import com.spring.its_here.domain.store.dto.response.*;
 import com.spring.its_here.domain.store.service.StoreService;
 import com.spring.its_here.global.response.ApiResponse;
 import com.spring.its_here.global.security.CustomUserDetails;
@@ -38,22 +35,24 @@ public class StoreController {
     }
 
     @GetMapping("/{storeId}")
-    public ResponseEntity<ApiResponse<StoreGetOneResponseDto>> getOneStore(@PathVariable UUID storeId){
-        StoreGetOneResponseDto responseDto = storeService.getOneStore(storeId);
+    public ResponseEntity<ApiResponse<StoreGetOneResponseDto>> getOneStore(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID storeId){
+        StoreGetOneResponseDto responseDto = storeService.getOneStore(userDetails, storeId);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success("가게 조회 성공", responseDto));
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<StoreGetAllResponseDto>>> getAllStores(
+    public ResponseEntity<ApiResponse<StoreGetAllPageResponseDto>> getAllStores(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String category,
             Pageable pageable){
         Page<StoreGetAllResponseDto> responseDtoList = storeService.getAllStores(name, category, pageable);
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(ApiResponse.success("가게 목록 조회 성공", responseDtoList));
+                .body(ApiResponse.success("가게 목록 조회 성공", StoreGetAllPageResponseDto.from(responseDtoList)));
     }
 
     @PutMapping("/{storeId}")
