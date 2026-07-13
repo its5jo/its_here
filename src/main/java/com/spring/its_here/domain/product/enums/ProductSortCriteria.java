@@ -16,6 +16,6 @@ public enum ProductSortCriteria {
         return Arrays.stream(values())
                 .filter(productSortCriteria -> productSortCriteria.value.equals(value))
                 .findFirst()
-                .orElseThrow(); // TODO: INVALID_SORT_CRITERIA, sortValue 커스텀 예외추가
+                .orElseThrow();
     }
 }
