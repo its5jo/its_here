@@ -76,9 +76,6 @@ public class UserService {
         // 사용자 저장
         userRepository.save(user);
 
-        // 생성자 저장
-        user.assignCreatedBy(user.getId());
-
         return new UserResponseDto(user.getId());
     }
 

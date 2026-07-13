@@ -1,6 +1,5 @@
 package com.spring.its_here.domain.user.controller;
 
-import com.spring.its_here.domain.user.dto.request.UserCreateRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserSignupRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserLoginRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserUpdateRequestDto;
