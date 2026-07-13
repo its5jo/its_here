@@ -1,5 +1,6 @@
 package com.spring.its_here.domain.review.service;
 
+import com.spring.its_here.domain.area.dto.response.AreaGetOneResponseDto;
 import com.spring.its_here.domain.area.entity.Area;
 import com.spring.its_here.domain.category.entity.Category;
 import com.spring.its_here.domain.order.entity.Order;
@@ -7,6 +8,7 @@ import com.spring.its_here.domain.order.enums.OrderStatus;
 import com.spring.its_here.domain.order.repository.OrderRepository;
 import com.spring.its_here.domain.review.dto.request.ReviewCreateRequestDto;
 import com.spring.its_here.domain.review.dto.response.ReviewCreateResponseDto;
+import com.spring.its_here.domain.review.dto.response.ReviewGetOneResponseDto;
 import com.spring.its_here.domain.review.entity.Review;
 import com.spring.its_here.domain.review.repository.ReviewRepository;
 import com.spring.its_here.domain.store.entity.Store;
@@ -24,6 +26,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,6 +34,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -306,6 +310,52 @@ class ReviewServiceTest {
                     );
 
             verify(reviewRepository, never()).save(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("조회")
+    class getReview {
+        @Test
+        @DisplayName("단건조회 성공")
+        void getOneReview_success() {
+            UserEntity user = createTestUser(userId);
+            Store store = createTestStore(user);
+            Order order = createTestOrder(
+                    userId,
+                    OrderStatus.COMPLETED
+            );
+
+            Review reviewSave = Review.savedReview(
+                    3.0,
+                    "content",
+                    user,
+                    store,
+                    order
+            );
+            ReflectionTestUtils.setField(reviewSave, "id", reviewId);
+
+            given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId)).willReturn(Optional.of(reviewSave));
+
+            ReviewGetOneResponseDto reviewGetOneResponseDto = reviewService.getOneReview(reviewId);
+
+            assertThat(reviewGetOneResponseDto).isNotNull();
+            assertThat(reviewGetOneResponseDto.reviewId()).isEqualTo(reviewId);
+
+            verify(reviewRepository).findByIdAndDeletedAtIsNull(reviewId);
+        }
+
+        @Test
+        @DisplayName("단건 조회 시 존재하지 않는 리뷰면 예외")
+        void getOneReview_not_found() {
+            ItsHereException itsHereException = assertThrows(
+                    ItsHereException.class,
+                    () -> reviewService.getOneReview(reviewId)
+            );
+
+            assertThat(itsHereException.getErrorCode()).isEqualTo(ErrorCode.REVIEW_NOT_FOUND);
+
+            verify(reviewRepository).findByIdAndDeletedAtIsNull(reviewId);
         }
     }
 }
