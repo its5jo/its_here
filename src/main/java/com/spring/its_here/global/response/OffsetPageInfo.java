@@ -3,7 +3,7 @@ package com.spring.its_here.global.response;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 
-public record PageInfo(
+public record OffsetPageInfo(
         String paginationType,
         Boolean hasNext,
         Long totalCount,
@@ -11,13 +11,13 @@ public record PageInfo(
         String sortDirection
 ) {
 
-    public static PageInfo from(Page<?> page) {
+    public static OffsetPageInfo from(Page<?> page) {
 
         Sort.Order order = page.getSort().stream()
                 .findFirst()
                 .orElse(Sort.Order.asc("createdAt"));
 
-        return new PageInfo(
+        return new OffsetPageInfo(
                 "OFFSET",
                 page.hasNext(),
                 page.getTotalElements(),
