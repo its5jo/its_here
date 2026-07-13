@@ -95,10 +95,6 @@ public class Store extends BaseDeletableEntity {
             Category category, Area area,
             boolean hasOpen, LocalTime openAt, LocalTime closedAt){
 
-        if(isDeleted()){
-            throw new IllegalStateException("삭제된 가게는 수정할 수 없습니다.");
-        }
-
         if(closedAt != null && openAt != null && closedAt.isBefore(openAt)){
             throw new IllegalArgumentException("영업 종료 시간은 시작 시간보다 늦어야 합니다.");
         }
