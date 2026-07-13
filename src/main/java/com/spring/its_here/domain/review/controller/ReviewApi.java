@@ -109,30 +109,30 @@ public interface ReviewApi {
 //            Pageable pageable
 //    );
 
-    @Operation(
-            summary = "리뷰 단건 조회",
-            description = "리뷰 ID로 삭제되지 않은 리뷰를 조회합니다.",
-            responses = {
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                            responseCode = "200",
-                            description = "리뷰 단건 조회 성공"
-                    ),
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                            responseCode = "404",
-                            description = "리뷰를 찾을 수 없음",
-                            content = @Content(
-                                    schema = @Schema(implementation = ErrorResponse.class)
-                            )
-                    )
-            }
-    )
-    ResponseEntity<ApiResponse<ReviewGetOneResponseDto>> getOneReview(
-            @Parameter(
-                    description = "리뷰 ID",
-                    required = true
-            )
-            UUID reviewId
-    );
+//    @Operation(
+//            summary = "리뷰 단건 조회",
+//            description = "리뷰 ID로 삭제되지 않은 리뷰를 조회합니다.",
+//            responses = {
+//                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+//                            responseCode = "200",
+//                            description = "리뷰 단건 조회 성공"
+//                    ),
+//                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+//                            responseCode = "404",
+//                            description = "리뷰를 찾을 수 없음",
+//                            content = @Content(
+//                                    schema = @Schema(implementation = ErrorResponse.class)
+//                            )
+//                    )
+//            }
+//    )
+//    ResponseEntity<ApiResponse<ReviewGetOneResponseDto>> getOneReview(
+//            @Parameter(
+//                    description = "리뷰 ID",
+//                    required = true
+//            )
+//            UUID reviewId
+//    );
 
 //    @Operation(
 //            summary = "리뷰 수정",
