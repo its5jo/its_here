@@ -1,7 +1,8 @@
 package com.spring.its_here.domain.user.service;
 
-import com.spring.its_here.domain.user.dto.request.UserCreateRequestDto;
+import com.spring.its_here.domain.user.dto.request.UserSignupRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserLoginRequestDto;
+import com.spring.its_here.domain.user.dto.request.UserUpdateRequestDto;
 import com.spring.its_here.domain.user.dto.response.TokenPairDto;
 import com.spring.its_here.domain.user.dto.response.UserResponseDto;
 import com.spring.its_here.domain.user.dto.response.UserSelfGetResponseDto;
@@ -63,14 +64,14 @@ class UserServiceTest {
         @DisplayName("회원가입 성공")
         void signup_success() {
             // given
-            UserCreateRequestDto request = new UserCreateRequestDto(
+            UserSignupRequestDto request = new UserSignupRequestDto(
                     "testUser",
                     "Password123!",
                     "테스터",
                     UserRole.CUSTOMER
             );
 
-            when(userRepository.existsByUsernameAndHasDeletedFalse("testUser"))
+            when(userRepository.existsByUsername("testUser"))
                     .thenReturn(false);
 
             when(passwordEncoder.encode("Password123!"))
@@ -102,7 +103,7 @@ class UserServiceTest {
             assertThat(savedUser.getRole()).isEqualTo(UserRole.CUSTOMER);
 
             verify(passwordEncoder).encode("Password123!");
-            verify(userRepository).existsByUsernameAndHasDeletedFalse("testUser");
+            verify(userRepository).existsByUsername("testUser");
             verify(userRepository).save(any(UserEntity.class));
         }
 
@@ -110,17 +111,14 @@ class UserServiceTest {
         @DisplayName("회원가입 실패 - 중복된 Username 또는 Nickname이면 예외가 발생")
         void signup_duplicate_username() {
             // given
-            UserCreateRequestDto request = new UserCreateRequestDto(
+            UserSignupRequestDto request = new UserSignupRequestDto(
                     "testUser",
                     "Password123!",
                     "테스터",
                     UserRole.CUSTOMER
             );
 
-            when(userRepository.existsByUsernameAndHasDeletedFalse("testUser"))
-                    .thenReturn(true);
-
-            when(userRepository.existsByNicknameAndHasDeletedFalse("테스터"))
+            when(userRepository.existsByUsername("testUser"))
                     .thenReturn(true);
 
             // when
@@ -133,17 +131,9 @@ class UserServiceTest {
             assertThat(exception.getErrorCode())
                     .isEqualTo(ErrorCode.DUPLICATE_USERNAME);
 
-            verify(userRepository)
-                    .existsByUsernameAndHasDeletedFalse("testUser");
-
-            verify(userRepository)
-                    .existsByNicknameAndHasDeletedFalse("테스터");
-
-            verify(userRepository, never())
-                    .save(any(UserEntity.class));
-
-            verify(passwordEncoder, never())
-                    .encode(anyString());
+            verify(userRepository).existsByUsername("testUser");
+            verify(userRepository, never()).save(any(UserEntity.class));
+            verify(passwordEncoder, never()).encode(anyString());
         }
     }
 
@@ -240,118 +230,61 @@ class UserServiceTest {
     }
 
     @Nested
-    @DisplayName("재발급 API 테스트")
-    class ReIssueTest {
+    @DisplayName("토큰 재발급 API 테스트")
+    class ReissueTest {
+
         @Test
         @DisplayName("토큰 재발급 성공")
         void reissue_success() {
             // given
-            String refreshToken = "oldRefreshToken";
+            String refreshToken = "refreshToken";
 
-            UserEntity user =
-                    UserEntity.create(
-                            "test",
-                            "encoded",
-                            "닉네임",
-                            UserRole.CUSTOMER
-                    );
+            UserEntity user = UserEntity.create(
+                    "test",
+                    "encodedPassword",
+                    "테스터",
+                    UserRole.CUSTOMER
+            );
 
             ReflectionTestUtils.setField(user, "id", 1L);
 
+            when(jwtProvider.validateToken(refreshToken))
+                    .thenReturn(true);
+
             when(jwtProvider.getUserId(refreshToken))
                     .thenReturn(1L);
-            when(userRepository.findById(1L))
+
+            when(userRepository.findByIdAndHasDeletedFalse(1L))
                     .thenReturn(Optional.of(user));
+
             when(jwtProvider.createAccessToken(any(CustomUserDetails.class)))
-                    .thenReturn("newAccess");
+                    .thenReturn("newAccessToken");
+
             when(jwtProvider.createRefreshToken(any(CustomUserDetails.class)))
-                    .thenReturn("newRefresh");
+                    .thenReturn("newRefreshToken");
 
             // when
-            TokenPairDto result =
-                    userService.reissue(refreshToken);
+            TokenPairDto response = userService.reissue(refreshToken);
 
             // then
-            assertThat(result.accessToken())
-                    .isEqualTo("newAccess");
-
-            assertThat(result.refreshToken())
-                    .isEqualTo("newRefresh");
+            assertThat(response.accessToken()).isEqualTo("newAccessToken");
+            assertThat(response.refreshToken()).isEqualTo("newRefreshToken");
 
             verify(jwtProvider).validateToken(refreshToken);
             verify(jwtProvider).getUserId(refreshToken);
-            verify(userRepository).findById(1L);
+            verify(userRepository).findByIdAndHasDeletedFalse(1L);
             verify(jwtProvider).createAccessToken(any(CustomUserDetails.class));
             verify(jwtProvider).createRefreshToken(any(CustomUserDetails.class));
         }
 
         @Test
-        @DisplayName("토큰 재발급 실패 - RefreshToken 검증 실패")
-        void reissue_fail_invalid_refreshToken() {
-            // given
-            String refreshToken = "invalidToken";
-
-            doThrow(new ItsHereException(ErrorCode.AUTH_UNAUTHORIZED))
-                    .when(jwtProvider)
-                    .validateToken(refreshToken);
-
-            // when
-            ItsHereException exception =
-                    assertThrows(
-                            ItsHereException.class,
-                            () -> userService.reissue(refreshToken)
-                    );
-
-            // then
-            assertThat(exception.getErrorCode())
-                    .isEqualTo(ErrorCode.AUTH_UNAUTHORIZED);
-
-            verify(jwtProvider).validateToken(refreshToken);
-            verify(jwtProvider, never()).getUserId(anyString());
-            verify(userRepository, never()).findById(anyLong());
-            verify(jwtProvider, never()).createAccessToken(any());
-            verify(jwtProvider, never()).createRefreshToken(any());
-        }
-
-        @Test
-        @DisplayName("토큰 재발급 실패 - 사용자가 존재하지 않으면 예외 발생")
-        void reissue_fail_userNotFound() {
-            // given
-            String refreshToken = "validRefreshToken";
-
-            when(jwtProvider.getUserId(refreshToken)).thenReturn(1L);
-            when(userRepository.findById(1L)).thenReturn(Optional.empty());
-
-            // when
-            ItsHereException exception =
-                    assertThrows(
-                            ItsHereException.class,
-                            () -> userService.reissue(refreshToken)
-                    );
-
-            // then
-            assertThat(exception.getErrorCode())
-                    .isEqualTo(ErrorCode.AUTH_UNAUTHORIZED);
-
-            verify(jwtProvider).validateToken(refreshToken);
-            verify(jwtProvider).getUserId(refreshToken);
-            verify(userRepository).findById(1L);
-            verify(jwtProvider, never()).createAccessToken(any());
-            verify(jwtProvider, never()).createRefreshToken(any());
-        }
-
-        @Test
-        @DisplayName("토큰 재발급 실패 - RefreshToken 검증에 실패하면 예외가 발생")
-        void reissue_fail_validateToken() {
+        @DisplayName("토큰 재발급 실패 - Refresh Token 검증 실패")
+        void reissue_fail_invalidRefreshToken() {
             // given
             String refreshToken = "invalidRefreshToken";
 
-            ItsHereException expectedException =
-                    new ItsHereException(ErrorCode.AUTH_UNAUTHORIZED);
-
-            doThrow(expectedException)
-                    .when(jwtProvider)
-                    .validateToken(refreshToken);
+            when(jwtProvider.validateToken(refreshToken))
+                    .thenReturn(false);
 
             // when
             ItsHereException exception = assertThrows(
@@ -364,9 +297,40 @@ class UserServiceTest {
                     .isEqualTo(ErrorCode.AUTH_UNAUTHORIZED);
 
             verify(jwtProvider).validateToken(refreshToken);
+            verify(jwtProvider, never()).getUserId(anyString());
+            verify(userRepository, never()).findByIdAndHasDeletedFalse(anyLong());
+            verify(jwtProvider, never()).createAccessToken(any());
+            verify(jwtProvider, never()).createRefreshToken(any());
+        }
 
-            // 이후 로직은 수행되지 않아야 한다.
-            verifyNoInteractions(userRepository);
+        @Test
+        @DisplayName("토큰 재발급 실패 - 사용자가 존재하지 않으면 예외가 발생")
+        void reissue_fail_userNotFound() {
+            // given
+            String refreshToken = "refreshToken";
+
+            when(jwtProvider.validateToken(refreshToken))
+                    .thenReturn(true);
+
+            when(jwtProvider.getUserId(refreshToken))
+                    .thenReturn(1L);
+
+            when(userRepository.findByIdAndHasDeletedFalse(1L))
+                    .thenReturn(Optional.empty());
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> userService.reissue(refreshToken)
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.AUTH_FORBIDDEN);
+
+            verify(jwtProvider).validateToken(refreshToken);
+            verify(jwtProvider).getUserId(refreshToken);
+            verify(userRepository).findByIdAndHasDeletedFalse(1L);
 
             verify(jwtProvider, never()).createAccessToken(any());
             verify(jwtProvider, never()).createRefreshToken(any());
@@ -376,6 +340,7 @@ class UserServiceTest {
     @Nested
     @DisplayName("내 정보 조회 API 테스트")
     class GetSelfTest {
+
         @Test
         @DisplayName("내 정보 조회 성공")
         void getSelf_success() {
@@ -394,7 +359,7 @@ class UserServiceTest {
             when(authenticationFacade.getCurrentUserId())
                     .thenReturn(userId);
 
-            when(userRepository.findById(userId))
+            when(userRepository.findByIdAndHasDeletedFalse(userId))
                     .thenReturn(Optional.of(user));
 
             // when
@@ -406,19 +371,19 @@ class UserServiceTest {
             assertThat(response.role()).isEqualTo(UserRole.CUSTOMER);
 
             verify(authenticationFacade).getCurrentUserId();
-            verify(userRepository).findById(userId);
+            verify(userRepository).findByIdAndHasDeletedFalse(userId);
         }
 
         @Test
-        @DisplayName("내 정보 조회 실패 - 사용자가 존재하지 않으면 예외가 발생")
-        void getSelf_fail_userNotFound() {
+        @DisplayName("내 정보 조회 실패 - 삭제된 사용자 또는 존재하지 않는 사용자이면 예외가 발생")
+        void getSelf_fail_deletedOrNotFoundUser() {
             // given
             Long userId = 1L;
 
             when(authenticationFacade.getCurrentUserId())
                     .thenReturn(userId);
 
-            when(userRepository.findById(userId))
+            when(userRepository.findByIdAndHasDeletedFalse(userId))
                     .thenReturn(Optional.empty());
 
             // when
@@ -432,7 +397,152 @@ class UserServiceTest {
                     .isEqualTo(ErrorCode.USER_NOT_FOUND);
 
             verify(authenticationFacade).getCurrentUserId();
-            verify(userRepository).findById(userId);
+            verify(userRepository).findByIdAndHasDeletedFalse(userId);
+        }
+    }
+
+    @Nested
+    @DisplayName("내 정보 삭제 API 테스트")
+    class DeleteSelfTest {
+
+        @Test
+        @DisplayName("내 정보 삭제 성공")
+        void delete_success() {
+            // given
+            Long userId = 1L;
+
+            UserEntity user = UserEntity.create(
+                    "testUser",
+                    "encodedPassword",
+                    "테스터",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(user, "id", userId);
+
+            when(authenticationFacade.getCurrentUserId())
+                    .thenReturn(userId);
+
+            when(userRepository.findByIdAndHasDeletedFalse(userId))
+                    .thenReturn(Optional.of(user));
+
+            // when
+            userService.delete();
+
+            // then
+            assertThat(user.getHasDeleted()).isTrue();
+            assertThat(user.getDeletedAt()).isNotNull();
+            assertThat(user.getDeletedBy()).isEqualTo(userId);
+
+            verify(authenticationFacade).getCurrentUserId();
+            verify(userRepository).findByIdAndHasDeletedFalse(userId);
+        }
+
+        @Test
+        @DisplayName("내 정보 삭제 실패 - 삭제된 사용자 또는 존재하지 않는 사용자이면 예외가 발생")
+        void delete_fail_userNotFound() {
+            // given
+            Long userId = 1L;
+
+            when(authenticationFacade.getCurrentUserId())
+                    .thenReturn(userId);
+
+            when(userRepository.findByIdAndHasDeletedFalse(userId))
+                    .thenReturn(Optional.empty());
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> userService.delete()
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.USER_NOT_FOUND);
+
+            verify(authenticationFacade).getCurrentUserId();
+            verify(userRepository).findByIdAndHasDeletedFalse(userId);
+        }
+    }
+
+    @Nested
+    @DisplayName("내 정보 수정 API 테스트")
+    class UpdateSelfTest {
+
+        @Test
+        @DisplayName("내 정보 수정 성공")
+        void update_success() {
+            // given
+            Long userId = 1L;
+
+            UserEntity user = UserEntity.create(
+                    "testUser",
+                    "encodedPassword",
+                    "기존닉네임",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(user, "id", userId);
+
+            UserUpdateRequestDto request =
+                    new UserUpdateRequestDto(
+                            "newPassword",
+                            "새닉네임"
+                    );
+
+            when(authenticationFacade.getCurrentUserId())
+                    .thenReturn(userId);
+
+            when(userRepository.findByIdAndHasDeletedFalse(userId))
+                    .thenReturn(Optional.of(user));
+
+            when(passwordEncoder.encode("newPassword"))
+                    .thenReturn("encodedNewPassword");
+
+            // when
+            UserResponseDto response = userService.update(request);
+
+            // then
+            assertThat(response.userId()).isEqualTo(userId);
+            assertThat(user.getPassword()).isEqualTo("encodedNewPassword");
+            assertThat(user.getNickname()).isEqualTo("새닉네임");
+
+            verify(authenticationFacade).getCurrentUserId();
+            verify(userRepository).findByIdAndHasDeletedFalse(userId);
+            verify(passwordEncoder).encode("newPassword");
+        }
+
+        @Test
+        @DisplayName("내 정보 수정 실패 - 삭제된 사용자 또는 존재하지 않는 사용자이면 예외가 발생")
+        void update_fail_userNotFound() {
+            // given
+            Long userId = 1L;
+
+            UserUpdateRequestDto request =
+                    new UserUpdateRequestDto(
+                            "newPassword",
+                            "새닉네임"
+                    );
+
+            when(authenticationFacade.getCurrentUserId())
+                    .thenReturn(userId);
+
+            when(userRepository.findByIdAndHasDeletedFalse(userId))
+                    .thenReturn(Optional.empty());
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> userService.update(request)
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.USER_NOT_FOUND);
+
+            verify(authenticationFacade).getCurrentUserId();
+            verify(userRepository).findByIdAndHasDeletedFalse(userId);
+            verify(passwordEncoder, never()).encode(anyString());
         }
     }
 }

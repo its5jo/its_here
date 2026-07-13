@@ -1,7 +1,8 @@
 package com.spring.its_here.domain.user.controller;
 
-import com.spring.its_here.domain.user.dto.request.UserCreateRequestDto;
+import com.spring.its_here.domain.user.dto.request.UserSignupRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserLoginRequestDto;
+import com.spring.its_here.domain.user.dto.request.UserUpdateRequestDto;
 import com.spring.its_here.domain.user.dto.response.TokenPairDto;
 import com.spring.its_here.domain.user.dto.response.UserResponseDto;
 import com.spring.its_here.domain.user.dto.response.UserSelfGetResponseDto;
@@ -36,14 +37,14 @@ public class UserController {
     @SecurityRequirements()
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<UserResponseDto>> signup(
-            @Valid @RequestBody UserCreateRequestDto userCreateRequestDto
+            @Valid @RequestBody UserSignupRequestDto userSignupRequestDto
     ) {
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(
                         "회원가입 성공",
-                        userService.signup(userCreateRequestDto)
+                        userService.signup(userSignupRequestDto)
                 ));
     }
 
@@ -127,6 +128,35 @@ public class UserController {
                 .body(ApiResponse.success(
                         "내 정보 조회 성공",
                         userService.getSelf()
+                ));
+    }
+
+    @Operation(
+            summary = "내 정보 삭제",
+            description = "권한이 있는 사용자가 자신의 정보를 삭제합니다."
+    )
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> deleteUser() {
+        userService.delete();
+
+        return ResponseEntity
+                .noContent()
+                .build();
+    }
+
+    @Operation(
+            summary = "내 정보 수정",
+            description = "권한이 있는 사용자가 자신의 정보를 수정합니다."
+    )
+    @PutMapping("/me")
+    public ResponseEntity<ApiResponse<UserResponseDto>> updateUser(
+            @Valid @RequestBody UserUpdateRequestDto userUpdateRequestDto
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(
+                        "내 정보 수정 성공",
+                        userService.update(userUpdateRequestDto)
                 ));
     }
 }

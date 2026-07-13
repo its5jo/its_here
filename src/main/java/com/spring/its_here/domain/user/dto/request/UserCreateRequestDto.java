@@ -1,8 +1,6 @@
 package com.spring.its_here.domain.user.dto.request;
 
-import com.spring.its_here.domain.user.enums.UserRole;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
@@ -25,9 +23,6 @@ public record UserCreateRequestDto(
 
         @NotBlank(message = "닉네임은 필수입니다.")
         @Size(min = 2, max = 15, message = "닉네임은 2자 이상 15자 이하입니다.")
-        String nickname,
-
-        @NotNull(message = "권한은 필수입니다.")
-        UserRole role
+        String nickname
 ) {
 }
