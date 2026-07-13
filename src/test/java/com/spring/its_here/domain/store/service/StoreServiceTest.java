@@ -5,9 +5,11 @@ import com.spring.its_here.domain.area.repository.AreaRepository;
 import com.spring.its_here.domain.category.entity.Category;
 import com.spring.its_here.domain.category.repository.CategoryRepository;
 import com.spring.its_here.domain.store.dto.request.StoreCreateRequestDto;
+import com.spring.its_here.domain.store.dto.request.StoreUpdateRequestDto;
 import com.spring.its_here.domain.store.dto.response.StoreCreateResponseDto;
 import com.spring.its_here.domain.store.dto.response.StoreGetAllResponseDto;
 import com.spring.its_here.domain.store.dto.response.StoreGetOneResponseDto;
+import com.spring.its_here.domain.store.dto.response.StoreUpdateResponseDto;
 import com.spring.its_here.domain.store.entity.Store;
 import com.spring.its_here.domain.store.repository.StoreRepository;
 import com.spring.its_here.domain.user.entity.UserEntity;
@@ -57,7 +59,7 @@ class StoreServiceTest {
 
         @Test
         @DisplayName("성공")
-        void createStore_success() {
+        void success() {
 
             // given
             // 카테고리, 지역 ID 생성
@@ -155,7 +157,7 @@ class StoreServiceTest {
 
         @Test
         @DisplayName("이미 이름이 같은 가게가 존재")
-        void createStore_duplicate_store_name() {
+        void duplicate_store_name() {
 
             // given
             // 카테고리, 지역 ID 생성
@@ -212,7 +214,7 @@ class StoreServiceTest {
 
         @Test
         @DisplayName("없거나 삭제된 카테고리")
-        void createStore_not_exists_category() {
+        void not_exists_category() {
 
             // given
             // 카테고리, 지역 ID 생성
@@ -269,7 +271,7 @@ class StoreServiceTest {
 
         @Test
         @DisplayName("없거나 삭제된 지역")
-        void createStore_not_exists_area() {
+        void not_exists_area() {
 
             // given
             // 카테고리, 지역 ID 생성
@@ -340,7 +342,7 @@ class StoreServiceTest {
 
         @Test
         @DisplayName("성공")
-        void getOneStore_success() {
+        void success() {
 
             // given
 
@@ -720,35 +722,523 @@ class StoreServiceTest {
             assertThat(newPageable.getPageNumber()).isEqualTo(1);
             assertThat(newPageable.getSort()).isEqualTo(pageable.getSort());
         }
+
+        @Test
+        @DisplayName("페이지 크기가 50이면 그대로 사용")
+        void validatePageable_size50() {
+
+            Pageable pageable =
+                    PageRequest.of(0, 50);
+
+            when(storeRepository.getAllStores(
+                    any(),
+                    any(),
+                    any(Pageable.class)
+            )).thenReturn(Page.empty());
+
+            storeService.getAllStores("교촌치킨","치킨", pageable);
+
+            ArgumentCaptor<Pageable> captor =
+                    ArgumentCaptor.forClass(Pageable.class);
+
+            verify(storeRepository)
+                    .getAllStores(
+                            eq("교촌치킨"),
+                            eq("치킨"),
+                            captor.capture()
+                    );
+
+            assertThat(captor.getValue().getPageSize())
+                    .isEqualTo(50);
+        }
     }
 
-    @Test
-    @DisplayName("페이지 크기가 50이면 그대로 사용")
-    void validatePageable_size50() {
+    @Nested
+    @DisplayName("가게 수정")
+    class UpdateStore {
 
-        Pageable pageable =
-                PageRequest.of(0, 50);
+        @Test
+        @DisplayName("성공")
+        void success() {
 
-        when(storeRepository.getAllStores(
-                any(),
-                any(),
-                any(Pageable.class)
-        )).thenReturn(Page.empty());
+            // given
+            UUID categoryId = UUID.randomUUID();
+            UUID areaId = UUID.randomUUID();
+            UUID storeId = UUID.randomUUID();
 
-        storeService.getAllStores("교촌치킨","치킨", pageable);
+            StoreUpdateRequestDto requestDto =
+                    new StoreUpdateRequestDto(
+                            "보어앤헝그리",
+                            "서울 성동구",
+                            false,
+                            areaId,
+                            categoryId,
+                            LocalTime.of(12, 0),
+                            LocalTime.of(21, 0)
+                    );
 
-        ArgumentCaptor<Pageable> captor =
-                ArgumentCaptor.forClass(Pageable.class);
+            UserEntity user = UserEntity.create(
+                    "manager1",
+                    "Manager1!!",
+                    "매니저",
+                    UserRole.MANAGER
+            );
 
-        verify(storeRepository)
-                .getAllStores(
-                        eq("교촌치킨"),
-                        eq("치킨"),
-                        captor.capture()
-                );
+            // Reflection으로 PK를 넣어줌
+            ReflectionTestUtils.setField(user, "id", 1L);
 
-        assertThat(captor.getValue().getPageSize())
-                .isEqualTo(50);
+            CustomUserDetails userDetails =
+                    new CustomUserDetails(user);
+
+            Category category = Category.createCategory("중식", false);
+
+            Area area = Area.create("서울특별시", "강남구", "삼성동");
+
+            Store store = Store.createStore(
+                    "교촌치킨 역삼점",
+                    "서울 강남구",
+                    user,
+                    category,
+                    area,
+                    true,
+                    LocalTime.of(9, 0),
+                    LocalTime.of(22, 0)
+            );
+
+            Category newCategory = Category.createCategory("양식", false);
+
+            Area newArea = Area.create("서울특별시", "성동구", "성수2가제3동");
+
+            // 모든 검증을 통과한다고 가정
+            when(storeRepository.findByIdAndDeletedAtIsNull(storeId))
+                    .thenReturn(Optional.of(store));
+
+            when(storeRepository.existsByNameAndDeletedAtIsNullAndIdNot(requestDto.name(), storeId))
+                    .thenReturn(false);
+
+            when(categoryRepository.findByIdAndDeletedAtIsNull(categoryId))
+                    .thenReturn(Optional.of(newCategory));
+
+            when(areaRepository.findByIdAndDeletedAtIsNull(areaId))
+                    .thenReturn(Optional.of(newArea));
+
+            // 서비스 호출
+            StoreUpdateResponseDto responseDto =
+                    storeService.updateStore(userDetails, storeId, requestDto);
+
+            // 응답 Dto 검증
+            assertThat(responseDto).isNotNull();
+            assertThat(responseDto.name()).isEqualTo(requestDto.name());
+            assertThat(responseDto.address()).isEqualTo(requestDto.address());
+            assertThat(responseDto.area()).isEqualTo(newArea.getTown());
+            assertThat(responseDto.category()).isEqualTo(newCategory.getName());
+            assertThat(responseDto.hasOpen()).isEqualTo(requestDto.hasOpen());
+            assertThat(responseDto.openAt()).isEqualTo(requestDto.openAt());
+            assertThat(responseDto.closedAt()).isEqualTo(requestDto.closedAt());
+
+            // Repository 호출 검증
+            verify(storeRepository).findByIdAndDeletedAtIsNull(storeId);
+            verify(storeRepository).existsByNameAndDeletedAtIsNullAndIdNot(requestDto.name(), storeId);
+            verify(categoryRepository).findByIdAndDeletedAtIsNull(categoryId);
+            verify(areaRepository).findByIdAndDeletedAtIsNull(areaId);
+
+        }
+
+        @Test
+        @DisplayName("카테고리와 지역은 유지하고 나머지 정보만 수정")
+        void success_without_category_area(){
+
+            // given
+            UUID categoryId = UUID.randomUUID();
+            UUID areaId = UUID.randomUUID();
+            UUID storeId = UUID.randomUUID();
+
+            StoreUpdateRequestDto requestDto =
+                    new StoreUpdateRequestDto(
+                            "을지다락",
+                            "서울 중구",
+                            false,
+                            areaId,
+                            categoryId,
+                            LocalTime.of(10, 0),
+                            LocalTime.of(22, 0)
+                    );
+
+            UserEntity user = UserEntity.create(
+                    "manager1",
+                    "Manager1!!",
+                    "매니저",
+                    UserRole.MANAGER
+            );
+
+            // Reflection으로 PK를 넣어줌
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            CustomUserDetails userDetails =
+                    new CustomUserDetails(user);
+
+            Category category = Category.createCategory("양식", false);
+
+            Area area = Area.create("서울특별시", "성동구", "성수2동");
+
+            Store store = Store.createStore(
+                    "이전 가게",
+                    "서울 강남구 압구정동",
+                    user,
+                    category,
+                    area,
+                    true,
+                    LocalTime.of(9, 0),
+                    LocalTime.of(23, 0)
+            );
+
+            // 모든 검증을 통과한다고 가정
+            when(storeRepository.findByIdAndDeletedAtIsNull(storeId))
+                    .thenReturn(Optional.of(store));
+
+            when(storeRepository.existsByNameAndDeletedAtIsNullAndIdNot(requestDto.name(), storeId))
+                    .thenReturn(false);
+
+            when(categoryRepository.findByIdAndDeletedAtIsNull(categoryId))
+                    .thenReturn(Optional.of(category));
+
+            when(areaRepository.findByIdAndDeletedAtIsNull(areaId))
+                    .thenReturn(Optional.of(area));
+
+            // 서비스 호출
+            StoreUpdateResponseDto responseDto =
+                    storeService.updateStore(userDetails, storeId, requestDto);
+
+            // 응답 Dto 검증
+            assertThat(responseDto).isNotNull();
+            assertThat(responseDto.name()).isEqualTo(requestDto.name());
+            assertThat(responseDto.address()).isEqualTo(requestDto.address());
+            assertThat(responseDto.area()).isEqualTo(area.getTown());
+            assertThat(responseDto.category()).isEqualTo(category.getName());
+            assertThat(responseDto.hasOpen()).isEqualTo(requestDto.hasOpen());
+            assertThat(responseDto.openAt()).isEqualTo(requestDto.openAt());
+            assertThat(responseDto.closedAt()).isEqualTo(requestDto.closedAt());
+
+            // Repository 호출 검증
+            verify(storeRepository).findByIdAndDeletedAtIsNull(storeId);
+            verify(storeRepository).existsByNameAndDeletedAtIsNullAndIdNot(requestDto.name(), storeId);
+            verify(categoryRepository).findByIdAndDeletedAtIsNull(categoryId);
+            verify(areaRepository).findByIdAndDeletedAtIsNull(areaId);
+
+        }
+
+        @Test
+        @DisplayName("관리자가 수정하는 경우")
+        void success_update_by_master() {
+
+            // given
+            UUID categoryId = UUID.randomUUID();
+            UUID areaId = UUID.randomUUID();
+            UUID storeId = UUID.randomUUID();
+
+            StoreUpdateRequestDto requestDto =
+                    new StoreUpdateRequestDto(
+                            "보어앤헝그리",
+                            "서울 성동구",
+                            false,
+                            areaId,
+                            categoryId,
+                            LocalTime.of(12, 0),
+                            LocalTime.of(21, 0)
+                    );
+
+            UserEntity user = UserEntity.create(
+                    "owner1",
+                    "Owner1!!",
+                    "찐주인",
+                    UserRole.OWNER
+            );
+
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            UserEntity user2 = UserEntity.create(
+                    "master1",
+                    "Master1!!",
+                    "마스터",
+                    UserRole.MASTER
+            );
+
+            ReflectionTestUtils.setField(user2, "id", 2L);
+
+            CustomUserDetails userDetails =
+                    new CustomUserDetails(user2);
+
+            Category category = Category.createCategory("중식", false);
+
+            Area area = Area.create("서울특별시", "강남구", "삼성동");
+
+            Store store = Store.createStore(
+                    "교촌치킨 역삼점",
+                    "서울 강남구",
+                    user,
+                    category,
+                    area,
+                    true,
+                    LocalTime.of(9, 0),
+                    LocalTime.of(22, 0)
+            );
+
+            Category newCategory = Category.createCategory("양식", false);
+
+            Area newArea = Area.create("서울특별시", "성동구", "성수2가제3동");
+
+            // 모든 검증을 통과한다고 가정
+            when(storeRepository.findByIdAndDeletedAtIsNull(storeId))
+                    .thenReturn(Optional.of(store));
+
+            when(storeRepository.existsByNameAndDeletedAtIsNullAndIdNot(requestDto.name(), storeId))
+                    .thenReturn(false);
+
+            when(categoryRepository.findByIdAndDeletedAtIsNull(categoryId))
+                    .thenReturn(Optional.of(category));
+
+            when(areaRepository.findByIdAndDeletedAtIsNull(areaId))
+                    .thenReturn(Optional.of(area));
+
+            // 서비스 호출
+            StoreUpdateResponseDto responseDto =
+                    storeService.updateStore(userDetails, storeId, requestDto);
+
+            // 응답 Dto 검증
+            assertThat(responseDto).isNotNull();
+            assertThat(responseDto.name()).isEqualTo(requestDto.name());
+            assertThat(responseDto.address()).isEqualTo(requestDto.address());
+            assertThat(responseDto.area()).isEqualTo(area.getTown());
+            assertThat(responseDto.category()).isEqualTo(category.getName());
+            assertThat(responseDto.hasOpen()).isEqualTo(requestDto.hasOpen());
+            assertThat(responseDto.openAt()).isEqualTo(requestDto.openAt());
+            assertThat(responseDto.closedAt()).isEqualTo(requestDto.closedAt());
+
+            // Repository 호출 검증
+            verify(storeRepository).findByIdAndDeletedAtIsNull(storeId);
+            verify(storeRepository).existsByNameAndDeletedAtIsNullAndIdNot(requestDto.name(), storeId);
+            verify(categoryRepository).findByIdAndDeletedAtIsNull(categoryId);
+            verify(areaRepository).findByIdAndDeletedAtIsNull(areaId);
+
+        }
+
+        @Test
+        @DisplayName("없거나 삭제된 가게 정보를 수정하려는 경우")
+        void not_exists_or_deleted_store() {
+
+            // given
+            UUID categoryId = UUID.randomUUID();
+            UUID areaId = UUID.randomUUID();
+            UUID storeId = UUID.randomUUID();
+
+            StoreUpdateRequestDto requestDto =
+                    new StoreUpdateRequestDto(
+                            "보어앤헝그리",
+                            "서울 성동구",
+                            false,
+                            areaId,
+                            categoryId,
+                            LocalTime.of(12, 0),
+                            LocalTime.of(21, 0)
+                    );
+
+            UserEntity user = UserEntity.create(
+                    "owner1",
+                    "Owner1!!",
+                    "찐주인",
+                    UserRole.OWNER
+            );
+
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            CustomUserDetails userDetails =
+                    new CustomUserDetails(user);
+
+            // 가게가 삭제되거나 없다고 가정
+            when(storeRepository.findByIdAndDeletedAtIsNull(storeId))
+                    .thenReturn(Optional.empty());
+
+            // when
+            ItsHereException exception =
+                    assertThrows(
+                            ItsHereException.class,
+                            () -> storeService.updateStore(userDetails, storeId, requestDto)
+                    );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.STORE_NOT_FOUND);
+
+            verify(storeRepository, never())
+                    .existsByNameAndDeletedAtIsNullAndIdNot(requestDto.name(), storeId);
+
+            verify(categoryRepository, never())
+                    .findByIdAndDeletedAtIsNull(categoryId);
+
+            verify(areaRepository, never())
+                    .findByIdAndDeletedAtIsNull(areaId);
+
+        }
+
+        @Test
+        @DisplayName("중복되는 가게 이름으로 수정하려는 경우")
+        void already_exists_store_name() {
+
+            // given
+            UUID categoryId = UUID.randomUUID();
+            UUID areaId = UUID.randomUUID();
+            UUID storeId = UUID.randomUUID();
+
+            StoreUpdateRequestDto requestDto =
+                    new StoreUpdateRequestDto(
+                            "보어앤헝그리",
+                            "서울 성동구",
+                            false,
+                            areaId,
+                            categoryId,
+                            LocalTime.of(12, 0),
+                            LocalTime.of(21, 0)
+                    );
+
+            UserEntity user = UserEntity.create(
+                    "owner1",
+                    "Owner1!!",
+                    "찐주인",
+                    UserRole.OWNER
+            );
+
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            CustomUserDetails userDetails =
+                    new CustomUserDetails(user);
+
+            Category category = Category.createCategory("패스트푸드", false);
+
+            Area area = Area.create("서울특별시", "종로구", "창신1동");
+
+            Store store = Store.createStore(
+                    "롯데리아 종로5가점",
+                    "서울 종로구",
+                    user,
+                    category,
+                    area,
+                    true,
+                    LocalTime.of(9, 0),
+                    LocalTime.of(22, 0)
+            );
+
+            when(storeRepository.findByIdAndDeletedAtIsNull(storeId))
+                    .thenReturn(Optional.of(store));
+
+            // 이름이 같은 다른 가게가 존재한다고 가정
+            when(storeRepository.existsByNameAndDeletedAtIsNullAndIdNot(requestDto.name(), storeId))
+                    .thenReturn(true);
+
+            // when
+            ItsHereException exception =
+                    assertThrows(
+                            ItsHereException.class,
+                            () -> storeService.updateStore(userDetails, storeId, requestDto)
+                    );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.STORE_NAME_DUPLICATE);
+
+            verify(categoryRepository, never())
+                    .findByIdAndDeletedAtIsNull(categoryId);
+
+            verify(areaRepository, never())
+                    .findByIdAndDeletedAtIsNull(areaId);
+
+        }
+
+        @Test
+        @DisplayName("자신의 가게가 아닌데 수정 시도하는 경우")
+        void when_owner_not_match_store_owner() {
+
+            // given
+            UUID categoryId = UUID.randomUUID();
+            UUID areaId = UUID.randomUUID();
+            UUID storeId = UUID.randomUUID();
+
+            StoreUpdateRequestDto requestDto =
+                    new StoreUpdateRequestDto(
+                            "보어앤헝그리",
+                            "서울 성동구",
+                            false,
+                            areaId,
+                            categoryId,
+                            LocalTime.of(12, 0),
+                            LocalTime.of(21, 0)
+                    );
+
+            UserEntity user = UserEntity.create(
+                    "owner1",
+                    "Owner1!!",
+                    "찐주인",
+                    UserRole.OWNER
+            );
+
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            UserEntity user2 = UserEntity.create(
+                    "another1",
+                    "Another1!!",
+                    "낫주인",
+                    UserRole.OWNER
+            );
+
+            ReflectionTestUtils.setField(user2, "id", 2L);
+
+            CustomUserDetails userDetails =
+                    new CustomUserDetails(user2);
+
+            Category category = Category.createCategory("중식", false);
+
+            Area area = Area.create("서울특별시", "강남구", "삼성동");
+
+            Store store = Store.createStore(
+                    "교촌치킨 역삼점",
+                    "서울 강남구",
+                    user,
+                    category,
+                    area,
+                    true,
+                    LocalTime.of(9, 0),
+                    LocalTime.of(22, 0)
+            );
+
+            Category newCategory = Category.createCategory("양식", false);
+
+            Area newArea = Area.create("서울특별시", "성동구", "성수2가제3동");
+
+            // 모든 검증을 통과한다고 가정
+            when(storeRepository.findByIdAndDeletedAtIsNull(storeId))
+                    .thenReturn(Optional.of(store));
+
+            when(storeRepository.existsByNameAndDeletedAtIsNullAndIdNot(requestDto.name(), storeId))
+                    .thenReturn(false);
+
+            // when
+            ItsHereException exception =
+                    assertThrows(
+                            ItsHereException.class,
+                            () -> storeService.updateStore(userDetails, storeId, requestDto)
+                    );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.STORE_NOT_OWNED);
+
+            verify(categoryRepository, never())
+                    .findByIdAndDeletedAtIsNull(categoryId);
+
+            verify(areaRepository, never())
+                    .findByIdAndDeletedAtIsNull(areaId);
+
+        }
+
     }
 
 }

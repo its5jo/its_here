@@ -74,9 +74,31 @@ public class StoreService {
         return storeRepository.getAllStores(name, category, newPageable);
     }
 
+    @PreAuthorize("hasAnyAuthority('OWNER','MANAGER','MASTER')")
     @Transactional
-    public StoreUpdateResponseDto updateStore(UUID storeId, StoreUpdateRequestDto requestDto) {
-        return null;
+    public StoreUpdateResponseDto updateStore(
+            CustomUserDetails userDetails, UUID storeId, StoreUpdateRequestDto requestDto) {
+
+        Store store = findStoreByIdAndNotDeleted(storeId);
+
+        existsDuplicateStoreNameExceptThisStore(storeId, requestDto.name());
+        validateStoreOwner(userDetails, store.getUser().getId());
+
+        Category category = findCategoryByIdAndNotDeleted(requestDto.categoryId());
+
+        Area area = findAreaByIdAndNotDeleted(requestDto.areaId());
+
+        store.updateStore(
+                requestDto.name(),
+                requestDto.address(),
+                category,
+                area,
+                requestDto.hasOpen(),
+                requestDto.openAt(),
+                requestDto.closedAt()
+        );
+
+        return StoreUpdateResponseDto.from(store);
     }
 
     @Transactional
@@ -127,14 +149,10 @@ public class StoreService {
         }
     }
 
-    private Category findCategoryById(UUID storeId){
-        return categoryRepository.findById(storeId)
-                .orElseThrow(() -> new ItsHereException(ErrorCode.CATEGORY_NOT_FOUND));
-    }
-
-    private Area findAreaById(UUID areaId){
-        return areaRepository.findById(areaId)
-                .orElseThrow(() -> new ItsHereException(ErrorCode.AREA_NOT_FOUND));
+    private void existsDuplicateStoreNameExceptThisStore(UUID storeId, String name) {
+        if(storeRepository.existsByNameAndDeletedAtIsNullAndIdNot(name, storeId)){
+            throw new ItsHereException(ErrorCode.STORE_NAME_DUPLICATE);
+        }
     }
 
     private Category findCategoryByIdAndNotDeleted(UUID categoryId){
@@ -151,4 +169,5 @@ public class StoreService {
         return storeRepository.findByIdAndDeletedAtIsNull(storeId)
                 .orElseThrow(() -> new ItsHereException(ErrorCode.STORE_NOT_FOUND));
     }
+
 }

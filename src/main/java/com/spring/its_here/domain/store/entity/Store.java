@@ -61,6 +61,11 @@ public class Store extends BaseDeletableEntity {
             UserEntity user, Category category, Area area,
             boolean hasOpen, LocalTime openAt, LocalTime closedAt
     ) {
+
+        if(closedAt != null && openAt != null && closedAt.isBefore(openAt)){
+            throw new IllegalArgumentException("영업 종료 시간은 시작 시간보다 늦어야 합니다.");
+        }
+
         Store store = new Store();
 
         store.name = name;
@@ -77,11 +82,6 @@ public class Store extends BaseDeletableEntity {
         return store;
     }
 
-    public void accumulateReview(double rating) {
-        this.reviewTotalRating += rating;
-        this.reviewTotalCount += 1;
-    }
-
     public double calculateAverageRating() {
         if(reviewTotalCount == 0){
             return 0.0;
@@ -90,7 +90,27 @@ public class Store extends BaseDeletableEntity {
     }
 
     // 수정 메서드
+    public void updateStore(
+            String name, String address,
+            Category category, Area area,
+            boolean hasOpen, LocalTime openAt, LocalTime closedAt){
 
-    // 삭제 메서드
+        if(isDeleted()){
+            throw new IllegalStateException("삭제된 가게는 수정할 수 없습니다.");
+        }
+
+        if(closedAt != null && openAt != null && closedAt.isBefore(openAt)){
+            throw new IllegalArgumentException("영업 종료 시간은 시작 시간보다 늦어야 합니다.");
+        }
+
+        this.name = name;
+        this.address = address;
+        this.category = category;
+        this.area = area;
+        this.hasOpen = hasOpen;
+        this.openAt = openAt;
+        this.closedAt = closedAt;
+
+    }
 
 }
