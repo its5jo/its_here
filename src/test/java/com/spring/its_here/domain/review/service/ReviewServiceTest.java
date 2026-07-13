@@ -6,7 +6,9 @@ import com.spring.its_here.domain.order.entity.Order;
 import com.spring.its_here.domain.order.enums.OrderStatus;
 import com.spring.its_here.domain.order.repository.OrderRepository;
 import com.spring.its_here.domain.review.dto.request.ReviewCreateRequestDto;
+import com.spring.its_here.domain.review.dto.request.ReviewGetAllRequestDto;
 import com.spring.its_here.domain.review.dto.response.ReviewCreateResponseDto;
+import com.spring.its_here.domain.review.dto.response.ReviewGetAllResponseDto;
 import com.spring.its_here.domain.review.dto.response.ReviewGetOneResponseDto;
 import com.spring.its_here.domain.review.entity.Review;
 import com.spring.its_here.domain.review.repository.ReviewRepository;
@@ -24,12 +26,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.*;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -354,11 +358,74 @@ class ReviewServiceTest {
 
             verify(reviewRepository).findByIdAndDeletedAtIsNull(reviewId);
         }
-        
+
         @Test
         @DisplayName("전체조회 성공")
-        void getAllReview_success(){
-            
+        void getAllReview_success() {
+            UserEntity user = createTestUser(userId);
+            Store store = createTestStore(user);
+            Order order = createTestOrder(
+                    userId,
+                    OrderStatus.COMPLETED
+            );
+            Review review1 = Review.savedReview(
+                    3.0,
+                    "content",
+                    user,
+                    store,
+                    order
+            );
+            Review review2 = Review.savedReview(
+                    3.0,
+                    "content",
+                    user,
+                    store,
+                    order
+            );
+            UUID reviewId1 = UUID.randomUUID();
+            UUID reviewId2 = UUID.randomUUID();
+            ReflectionTestUtils.setField(review1, "id", reviewId1);
+            ReflectionTestUtils.setField(review2, "id", reviewId2);
+
+            ReviewGetAllRequestDto reviewGetAllRequestDto = new ReviewGetAllRequestDto(
+                    storeId,
+                    3.0
+            );
+
+            Pageable pageable = PageRequest.of(
+                    0,
+                    10,
+                    Sort.by(Sort.Direction.DESC, "createdAt")
+            );
+
+            Page<Review> areaPage = new PageImpl<>(
+                    List.of(review1, review2),
+                    pageable,
+                    12
+            );
+
+            given(reviewRepository.searchReviews(
+                    reviewGetAllRequestDto.storeId(),
+                    reviewGetAllRequestDto.rating(),
+                    pageable
+            )).willReturn(areaPage);
+
+            ReviewGetAllResponseDto reviewGetAllResponseDto = reviewService.getAllReview(
+                    reviewGetAllRequestDto,
+                    pageable
+            );
+
+            assertThat(reviewGetAllResponseDto).isNotNull();
+            assertThat(reviewGetAllResponseDto.content()).hasSize(2);
+            assertThat(reviewGetAllResponseDto.content().get(0).reviewId()).isEqualTo(reviewId1);
+            assertThat(reviewGetAllResponseDto.pageInfo().totalCount()).isEqualTo(12L);
+            assertThat(reviewGetAllResponseDto.pageInfo().hasNext()).isTrue();
+
+            verify(reviewRepository).searchReviews(
+                    reviewGetAllRequestDto.storeId(),
+                    reviewGetAllRequestDto.rating(),
+                    pageable
+            );
         }
     }
 }
