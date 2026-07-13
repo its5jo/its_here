@@ -44,7 +44,6 @@ public class AreaService {
                 areaCreateRequestDto.district(),
                 areaCreateRequestDto.town()
         );
-        area.assignCreatedBy(userId);
 
         Area areaSave = areaRepository.save(area);
 
@@ -93,7 +92,7 @@ public class AreaService {
                         area.getTown(),
                         area.isHasAvailable()
                 )).toList();
-        PageInfo pageInfo = PageInfo.from(areaPage);
+        OffsetPageInfo pageInfo = OffsetPageInfo.from(areaPage);
 
         return new AreaGetAllResponseDto(
                 content,

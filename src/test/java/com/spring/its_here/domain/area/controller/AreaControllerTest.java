@@ -136,7 +136,7 @@ class AreaControllerTest {
                     "town",
                     true
             );
-            PageInfo pageInfo = new PageInfo(
+            OffsetPageInfo pageInfo = new OffsetPageInfo(
                     "OFFSET",
                     false,
                     1L,
@@ -181,7 +181,7 @@ class AreaControllerTest {
         @ValueSource(ints = {1, 20, 40, 100})
         @DisplayName("조회개수가 10, 30, 50이 아니면 10건으로 조회")
         void getAllArea_invalid_size(int size) throws Exception {
-            PageInfo pageInfo = new PageInfo(
+            OffsetPageInfo pageInfo = new OffsetPageInfo(
                     "OFFSET",
                     false,
                     0L,
