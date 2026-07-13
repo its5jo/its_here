@@ -2,6 +2,7 @@ package com.spring.its_here.domain.order.entity;
 
 import com.spring.its_here.global.base.BaseEntity;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -10,7 +11,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "p_order_product")
 @Getter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OrderProduct extends BaseEntity {
 
     @Id
