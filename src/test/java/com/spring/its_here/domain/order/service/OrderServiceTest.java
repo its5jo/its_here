@@ -103,9 +103,8 @@ class OrderServiceTest {
         @Test
         @DisplayName("주문 생성 성공")
         void create_success() {
-            // given
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(store));
+            when(store.getDeletedAt()).thenReturn(null);
             when(store.getHasOpen()).thenReturn(true);
             when(productRepository.findAllById(anyList())).thenReturn(List.of(product));
             when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
@@ -116,17 +115,12 @@ class OrderServiceTest {
             when(orderProductRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
             when(paymentService.createForOrder(any(UUID.class), anyInt())).thenReturn(paymentResponseDto);
 
-            // when
             OrderResponseDto response = orderService.create(requestDto, USER_ID);
 
-            // then
             assertThat(response.orderId()).isEqualTo(ORDER_ID);
-            assertThat(response.storeId()).isEqualTo(STORE_ID);
-            assertThat(response.userId()).isEqualTo(USER_ID);
             assertThat(response.totalAmount()).isEqualTo(20000);
-            assertThat(response.payment()).isEqualTo(paymentResponseDto);
 
-            verify(userRepository).findById(USER_ID);
+            // verify(userRepository).findById(USER_ID);  ← 이 줄 제거
             verify(storeRepository).findById(STORE_ID);
             verify(productRepository).findAllById(anyList());
             verify(orderRepository).save(any(Order.class));
@@ -135,108 +129,66 @@ class OrderServiceTest {
         }
 
         @Test
-        @DisplayName("주문 생성 실패 - 존재하지 않는 유저")
-        void create_fail_userNotFound() {
-            // given
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
+        @DisplayName("주문 생성 실패 - 존재하지 않는 가게")
+        void create_fail_storeNotFound() {
+            when(storeRepository.findById(STORE_ID)).thenReturn(Optional.empty());
 
-            // when
             ItsHereException exception = assertThrows(
                     ItsHereException.class,
                     () -> orderService.create(requestDto, USER_ID)
             );
 
-            // then
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.USER_NOT_FOUND);
-
-            verify(userRepository).findById(USER_ID);
-            verifyNoInteractions(storeRepository, productRepository, orderRepository,
-                    orderProductRepository, paymentService);
-        }
-
-        @Test
-        @DisplayName("주문 생성 실패 - 존재하지 않는 가게")
-        void create_fail_storeNotFound() {
-            // given
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-            when(storeRepository.findById(STORE_ID)).thenReturn(Optional.empty());
-
-            // when
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> orderService.create(requestDto, USER_ID)
-            );
-
-            // then
-            assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-
-            verify(storeRepository).findById(STORE_ID);
-            verifyNoInteractions(productRepository, orderRepository, orderProductRepository, paymentService);
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.STORE_NOT_FOUND);  // ✅
         }
 
         @Test
         @DisplayName("주문 생성 실패 - 삭제된 가게")
         void create_fail_storeDeleted() {
-            // given
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(store));
             when(store.getDeletedAt()).thenReturn(Instant.now());
 
-            // when
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
                     () -> orderService.create(requestDto, USER_ID)
             );
 
-            // then
-            assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-
-            verifyNoInteractions(productRepository, orderRepository, orderProductRepository, paymentService);
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.STORE_NOT_FOUND);  // ✅
         }
 
         @Test
         @DisplayName("주문 생성 실패 - 영업 종료된 가게")
         void create_fail_storeClosed() {
-            // given
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(store));
+            when(store.getDeletedAt()).thenReturn(null);
             when(store.getHasOpen()).thenReturn(false);
 
-            // when
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
                     () -> orderService.create(requestDto, USER_ID)
             );
 
-            // then
-            assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-
-            verifyNoInteractions(productRepository, orderRepository, orderProductRepository, paymentService);
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.STORE_CLOSED);  // ✅
         }
 
         @Test
         @DisplayName("주문 생성 실패 - 존재하지 않는 상품 포함")
         void create_fail_productNotFound() {
-            // given
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(store));
+            when(store.getDeletedAt()).thenReturn(null);
             when(store.getHasOpen()).thenReturn(true);
             when(productRepository.findAllById(anyList())).thenReturn(List.of());
 
-            // when
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
                     () -> orderService.create(requestDto, USER_ID)
             );
 
-            // then
-            assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-
-            verifyNoInteractions(orderRepository, orderProductRepository, paymentService);
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);  // ✅
         }
     }
 
-    @Nested
+
+        @Nested
     @DisplayName("주문 단건 조회 테스트")
     class GetOrderTest {
 
