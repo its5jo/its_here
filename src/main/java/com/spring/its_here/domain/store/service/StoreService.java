@@ -53,7 +53,7 @@ public class StoreService {
 
         Store newStore = storeRepository.save(store);
 
-        return new StoreCreateResponseDto(newStore.getId());
+        return StoreCreateResponseDto.from(newStore.getId());
     }
 
     @PreAuthorize("hasAnyAuthority('OWNER','MANAGER','MASTER')")
@@ -66,9 +66,7 @@ public class StoreService {
         Category category = store.getCategory();
         Area area = store.getArea();
 
-        return new StoreGetOneResponseDto(store.getName(), store.getAddress(),
-                area.getTown(), category.getName(), store.calculateAverageRating(),
-                store.getHasOpen(), store.getOpenAt(), store.getClosedAt());
+        return StoreGetOneResponseDto.from(store, area, category);
     }
 
     @PreAuthorize("hasAnyAuthority('MANAGER','MASTER')")
