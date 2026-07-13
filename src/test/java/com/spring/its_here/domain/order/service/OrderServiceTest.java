@@ -3,7 +3,9 @@ package com.spring.its_here.domain.order.service;
 import com.spring.its_here.domain.order.dto.request.OrderCreateRequestDto;
 import com.spring.its_here.domain.order.dto.request.OrderProductRequestDto;
 import com.spring.its_here.domain.order.dto.response.OrderResponseDto;
+import com.spring.its_here.domain.order.dto.response.OrderSummaryResponseDto;
 import com.spring.its_here.domain.order.entity.Order;
+import com.spring.its_here.domain.order.enums.OrderStatus;
 import com.spring.its_here.domain.order.repository.OrderProductRepository;
 import com.spring.its_here.domain.order.repository.OrderRepository;
 import com.spring.its_here.domain.payment.dto.response.PaymentResponseDto;
@@ -19,6 +21,7 @@ import com.spring.its_here.domain.user.enums.UserRole;
 import com.spring.its_here.domain.user.repository.UserRepository;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
+import com.spring.its_here.global.response.PageResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -27,6 +30,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
@@ -74,7 +79,7 @@ class OrderServiceTest {
 
         store = mock(Store.class);
 
-        product = Product.create("테스트상품", "설명", false, 10000, null);
+        product = Product.create("테스트상품", "설명", false, 10000, null, store);
         ReflectionTestUtils.setField(product, "id", PRODUCT_ID);
 
         requestDto = new OrderCreateRequestDto(
@@ -228,6 +233,167 @@ class OrderServiceTest {
             assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
 
             verifyNoInteractions(orderRepository, orderProductRepository, paymentService);
+        }
+    }
+
+    @Nested
+    @DisplayName("주문 단건 조회 테스트")
+    class GetOrderTest {
+
+        private Order order;
+
+        @BeforeEach
+        void setUp() {
+            order = Order.create(STORE_ID, USER_ID, "서울시 강남구", "문 앞에", 20000);
+            ReflectionTestUtils.setField(order, "id", ORDER_ID);
+        }
+
+        @Test
+        @DisplayName("단건 조회 성공 - CUSTOMER 본인 주문")
+        void getOrder_success_customer() {
+            // given
+            when(orderRepository.findByIdAndDeletedAtIsNull(ORDER_ID))
+                    .thenReturn(Optional.of(order));
+            when(orderProductRepository.findAllByOrderId(ORDER_ID))
+                    .thenReturn(List.of());
+            when(paymentService.getPaymentByOrderId(ORDER_ID))
+                    .thenReturn(paymentResponseDto);
+
+            // when
+            OrderResponseDto response = orderService.getOrder(ORDER_ID, USER_ID, UserRole.CUSTOMER);
+
+            // then
+            assertThat(response.orderId()).isEqualTo(ORDER_ID);
+            assertThat(response.userId()).isEqualTo(USER_ID);
+            verify(orderRepository).findByIdAndDeletedAtIsNull(ORDER_ID);
+        }
+
+        @Test
+        @DisplayName("단건 조회 실패 - 존재하지 않는 주문")
+        void getOrder_fail_orderNotFound() {
+            // given
+            when(orderRepository.findByIdAndDeletedAtIsNull(ORDER_ID))
+                    .thenReturn(Optional.empty());
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> orderService.getOrder(ORDER_ID, USER_ID, UserRole.CUSTOMER)
+            );
+
+            // then
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ORDER_NOT_FOUND);
+            verifyNoInteractions(orderProductRepository, paymentService);
+        }
+
+        @Test
+        @DisplayName("단건 조회 실패 - CUSTOMER가 남의 주문 조회")
+        void getOrder_fail_customerForbidden() {
+            // given
+            Long anotherUserId = 999L;
+            when(orderRepository.findByIdAndDeletedAtIsNull(ORDER_ID))
+                    .thenReturn(Optional.of(order));  // order.userId = USER_ID
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> orderService.getOrder(ORDER_ID, anotherUserId, UserRole.CUSTOMER)
+            );
+
+            // then
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN_ORDER_ACCESS);
+            verifyNoInteractions(orderProductRepository, paymentService);
+        }
+
+        @Test
+        @DisplayName("단건 조회 성공 - MANAGER는 모든 주문 조회 가능")
+        void getOrder_success_manager() {
+            // given
+            Long managerUserId = 999L;  // 다른 유저지만 MANAGER라 가능
+            when(orderRepository.findByIdAndDeletedAtIsNull(ORDER_ID))
+                    .thenReturn(Optional.of(order));
+            when(orderProductRepository.findAllByOrderId(ORDER_ID))
+                    .thenReturn(List.of());
+            when(paymentService.getPaymentByOrderId(ORDER_ID))
+                    .thenReturn(paymentResponseDto);
+
+            // when
+            OrderResponseDto response = orderService.getOrder(ORDER_ID, managerUserId, UserRole.MANAGER);
+
+            // then
+            assertThat(response.orderId()).isEqualTo(ORDER_ID);
+            verify(orderRepository).findByIdAndDeletedAtIsNull(ORDER_ID);
+        }
+    }
+
+    @Nested
+    @DisplayName("주문 목록 조회 테스트")
+    class GetOrderListTest {
+
+        @Test
+        @DisplayName("목록 조회 실패 - 허용되지 않는 페이지 크기")
+        void getOrderList_fail_invalidPageSize() {
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> orderService.getOrderList(0, 20, USER_ID, UserRole.CUSTOMER, null)
+            );
+
+            // then
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE);
+            verifyNoInteractions(orderRepository);
+        }
+
+        @Test
+        @DisplayName("목록 조회 성공 - CUSTOMER 허용 페이지 크기 10")
+        void getOrderList_success_customer_size10() {
+            // given
+            Page<Order> emptyPage = Page.empty();
+            when(orderRepository.findByUserIdAndDeletedAtIsNull(eq(USER_ID), any(Pageable.class)))
+                    .thenReturn(emptyPage);
+
+            // when
+            PageResponse<OrderSummaryResponseDto> response =
+                    orderService.getOrderList(0, 10, USER_ID, UserRole.CUSTOMER, null);
+
+            // then
+            assertThat(response.totalElements()).isEqualTo(0);
+            verify(orderRepository).findByUserIdAndDeletedAtIsNull(eq(USER_ID), any(Pageable.class));
+        }
+
+        @Test
+        @DisplayName("목록 조회 성공 - CUSTOMER status 필터")
+        void getOrderList_success_customer_withStatus() {
+            // given
+            Page<Order> emptyPage = Page.empty();
+            when(orderRepository.findByUserIdAndStatusAndDeletedAtIsNull(
+                    eq(USER_ID), eq(OrderStatus.REQUESTED), any(Pageable.class)))
+                    .thenReturn(emptyPage);
+
+            // when
+            PageResponse<OrderSummaryResponseDto> response =
+                    orderService.getOrderList(0, 10, USER_ID, UserRole.CUSTOMER, OrderStatus.REQUESTED);
+
+            // then
+            assertThat(response.totalElements()).isEqualTo(0);
+            verify(orderRepository).findByUserIdAndStatusAndDeletedAtIsNull(
+                    eq(USER_ID), eq(OrderStatus.REQUESTED), any(Pageable.class));
+        }
+
+        @Test
+        @DisplayName("목록 조회 성공 - MANAGER 전체 조회")
+        void getOrderList_success_manager() {
+            // given
+            Page<Order> emptyPage = Page.empty();
+            when(orderRepository.findByDeletedAtIsNull(any(Pageable.class)))
+                    .thenReturn(emptyPage);
+
+            // when
+            PageResponse<OrderSummaryResponseDto> response =
+                    orderService.getOrderList(0, 10, USER_ID, UserRole.MANAGER, null);
+
+            // then
+            verify(orderRepository).findByDeletedAtIsNull(any(Pageable.class));
         }
     }
 }
