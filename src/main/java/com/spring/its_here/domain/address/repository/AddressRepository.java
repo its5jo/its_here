@@ -4,8 +4,12 @@ import com.spring.its_here.domain.address.entity.Address;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface AddressRepository extends JpaRepository<Address, UUID> {
+    Boolean existsByUserIdAndAddressAndDeletedAtNull(Long userId, String address);
+
+    Optional<Address> findByUserIdAndAddressAndDeletedAtNotNull(Long userId, String address);
 }

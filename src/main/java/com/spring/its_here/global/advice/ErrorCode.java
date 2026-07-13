@@ -45,8 +45,11 @@ public enum ErrorCode {
     REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 존재하는 리뷰입니다.", "R-004"),
 
     // product
-    PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "상품이 존재하지 않습니다.", "P-001")
+    PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "상품이 존재하지 않습니다.", "P-001"),
 
+    // address
+    ADDRESS_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 등록된 주소입니다.", "AD-001"),
+    ADDRESS_NOT_FOUND(HttpStatus.NOT_FOUND, "주소를 찾을 수 없습니다.", "AD-002")
     ;
 
     private final String message;

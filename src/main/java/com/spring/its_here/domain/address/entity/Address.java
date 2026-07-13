@@ -25,4 +25,12 @@ public class Address extends BaseDeletableEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private UserEntity user;
+
+    public static Address create(String address, UserEntity user) {
+        Address addressEntity = new Address();
+        addressEntity.address = address;
+        addressEntity.user = user;
+
+        return addressEntity;
+    }
 }
