@@ -2,9 +2,7 @@ package com.spring.its_here.domain.review.controller;
 
 
 import com.spring.its_here.domain.review.dto.request.ReviewCreateRequestDto;
-import com.spring.its_here.domain.review.dto.request.ReviewGetAllRequestDto;
 import com.spring.its_here.domain.review.dto.response.ReviewCreateResponseDto;
-import com.spring.its_here.domain.review.dto.response.ReviewGetAllResponseDto;
 import com.spring.its_here.domain.review.dto.response.ReviewGetOneResponseDto;
 import com.spring.its_here.global.advice.ErrorResponse;
 import com.spring.its_here.global.response.ApiResponse;
@@ -14,7 +12,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 
 import java.util.UUID;
@@ -78,37 +75,39 @@ public interface ReviewApi {
             ReviewCreateRequestDto request
     );
 
-    @Operation(
-            summary = "리뷰 전체 조회",
-            description = "특정 가게에 작성된 리뷰 목록을 조회합니다.",
-            responses = {
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                            responseCode = "200",
-                            description = "리뷰 전체 조회 성공"
-                    ),
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                            responseCode = "400",
-                            description = "유효하지 않은 평점 또는 조회 개수",
-                            content = @Content(
-                                    schema = @Schema(implementation = ErrorResponse.class)
-                            )
-                    ),
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                            responseCode = "404",
-                            description = "가게를 찾을 수 없음",
-                            content = @Content(
-                                    schema = @Schema(implementation = ErrorResponse.class)
-                            )
-                    )
-            }
-    )
-    ResponseEntity<ApiResponse<ReviewGetAllResponseDto>> getAllReview(
-            @Parameter(description = "리뷰 검색 조건")
-            ReviewGetAllRequestDto request,
+// TODO : 추후 주석 해제
 
-            @Parameter(description = "페이지 번호, 조회 개수 및 정렬 조건")
-            Pageable pageable
-    );
+//    @Operation(
+//            summary = "리뷰 전체 조회",
+//            description = "특정 가게에 작성된 리뷰 목록을 조회합니다.",
+//            responses = {
+//                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+//                            responseCode = "200",
+//                            description = "리뷰 전체 조회 성공"
+//                    ),
+//                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+//                            responseCode = "400",
+//                            description = "유효하지 않은 평점 또는 조회 개수",
+//                            content = @Content(
+//                                    schema = @Schema(implementation = ErrorResponse.class)
+//                            )
+//                    ),
+//                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+//                            responseCode = "404",
+//                            description = "가게를 찾을 수 없음",
+//                            content = @Content(
+//                                    schema = @Schema(implementation = ErrorResponse.class)
+//                            )
+//                    )
+//            }
+//    )
+//    ResponseEntity<ApiResponse<ReviewGetAllResponseDto>> getAllReview(
+//            @Parameter(description = "리뷰 검색 조건")
+//            ReviewGetAllRequestDto request,
+//
+//            @Parameter(description = "페이지 번호, 조회 개수 및 정렬 조건")
+//            Pageable pageable
+//    );
 
     @Operation(
             summary = "리뷰 단건 조회",
@@ -134,8 +133,6 @@ public interface ReviewApi {
             )
             UUID reviewId
     );
-
-// TODO : 추후 주석 해제
 
 //    @Operation(
 //            summary = "리뷰 수정",
