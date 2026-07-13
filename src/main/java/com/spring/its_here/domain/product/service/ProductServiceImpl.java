@@ -1,8 +1,10 @@
 package com.spring.its_here.domain.product.service;
 
 import com.spring.its_here.domain.product.dto.command.ProductCreateCommand;
+import com.spring.its_here.domain.product.dto.command.ProductUpdateCommand;
 import com.spring.its_here.domain.product.dto.response.ProductCreateResponseDto;
 import com.spring.its_here.domain.product.dto.response.ProductResponseDto;
+import com.spring.its_here.domain.product.dto.response.ProductUpdateResponseDto;
 import com.spring.its_here.domain.product.entity.Product;
 import com.spring.its_here.domain.product.repository.ProductRepository;
 import com.spring.its_here.domain.store.entity.Store;
@@ -68,13 +70,74 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public void updateProduct(UUID productId) {
+    @Transactional
+    public ProductUpdateResponseDto updateProduct(ProductUpdateCommand productUpdateCommand, Long loginUserId) {
 
+        UserEntity user = userRepository.findById(loginUserId)
+                .orElseThrow(() -> new ItsHereException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getRole() != UserRole.OWNER) {
+            log.warn("상품 수정 권한 없음. userId={}, role={}", loginUserId, user.getRole());
+            throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
+        }
+
+        Product product = productRepository.findById(productUpdateCommand.productId())
+                .orElseThrow(() -> new ItsHereException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        if (!loginUserId.equals(product.getStore().getUser().getId())) {
+            log.warn("상품 수정 권한 없음. userId={}, productId={}, storeId={}",
+                    loginUserId,
+                    product.getId(),
+                    product.getStore().getId())
+            ;
+            throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
+        }
+
+        product.update(
+                productUpdateCommand.name(),
+                productUpdateCommand.description(),
+                productUpdateCommand.hasHidden(),
+                productUpdateCommand.price(),
+                productUpdateCommand.imageUrl()
+        );
+
+        log.info(
+                "상품 수정 처리 요청 완료. productId={}, storeId={}, userId={}",
+                product.getId(),
+                product.getStore().getId(),
+                loginUserId
+        );
+        return new ProductUpdateResponseDto(product.getId());
     }
 
     @Override
-    public void deleteProduct(UUID productId) {
+    @Transactional
+    public void deleteProduct(UUID productId, Long loginUserId) {
+        UserEntity user = userRepository.findById(loginUserId).orElseThrow(() -> new ItsHereException(ErrorCode.USER_NOT_FOUND));
 
+        if (user.getRole() != UserRole.OWNER) {
+            log.warn("상품 삭제 권한 없음. userId={}, role={}", loginUserId, user.getRole());
+            throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
+        }
+
+        Product product = productRepository.findById(productId).orElseThrow(() -> new ItsHereException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        if (!loginUserId.equals(product.getStore().getUser().getId())) {
+            log.warn("상품 삭제 권한 없음. userId={}, productId={}, storeId={}",
+                    loginUserId,
+                    product.getId(),
+                    product.getStore().getId()
+            );
+            throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
+        }
+
+        product.delete(loginUserId);
+
+        log.info("상품 삭제 처리 요청 완료. productId={}, storeId={}, userId={}",
+                product.getId(),
+                product.getStore().getId(),
+                loginUserId
+        );
     }
 
     @Override

@@ -1,7 +1,8 @@
 package com.spring.its_here.domain.user.service;
 
-import com.spring.its_here.domain.user.dto.request.UserCreateRequestDto;
+import com.spring.its_here.domain.user.dto.request.UserSignupRequestDto;
 import com.spring.its_here.domain.user.dto.request.UserLoginRequestDto;
+import com.spring.its_here.domain.user.dto.request.UserUpdateRequestDto;
 import com.spring.its_here.domain.user.dto.response.TokenPairDto;
 import com.spring.its_here.domain.user.dto.response.UserResponseDto;
 import com.spring.its_here.domain.user.dto.response.UserSelfGetResponseDto;
@@ -31,36 +32,49 @@ public class UserService {
     private final JwtProvider jwtProvider;
     private final AuthenticationFacade authenticationFacade;
 
-    @Transactional
-    public UserResponseDto signup(UserCreateRequestDto userCreateRequestDto) {
-        // 동일한 아이디, 닉네임 존재 확인
-        if (userRepository.existsByUsernameAndHasDeletedFalse(userCreateRequestDto.username())
-            && userRepository.existsByNicknameAndHasDeletedFalse(userCreateRequestDto.nickname())
-        ) {
+    // 동일 아이디 존재 확인 로직
+    private void existsByUsername(String username) {
+        if (userRepository.existsByUsername(username)) {
             throw new ItsHereException(ErrorCode.DUPLICATE_USERNAME);
         }
+    }
 
-        // CUSTOMER, MANAGER 제외 생성 불가능
-        if (userCreateRequestDto.role() != UserRole.CUSTOMER && userCreateRequestDto.role() != UserRole.OWNER) {
+    // 인증된 user 객체 조회 및 반환
+    private UserEntity getCurrentUser() {
+        // SecurityContext에 저장된 현재 로그인 사용자의 PK를 조회
+        Long userId = authenticationFacade.getCurrentUserId();
+
+        // PK를 이용하여 최신 사용자 정보를 조회
+        return userRepository.findByIdAndHasDeletedFalse(userId)
+                .orElseThrow(() ->
+                        new ItsHereException(ErrorCode.USER_NOT_FOUND)
+                );
+    }
+
+    @Transactional
+    public UserResponseDto signup(UserSignupRequestDto userSignupRequestDto) {
+        // 동일한 아이디 존재 확인
+        existsByUsername(userSignupRequestDto.username());
+
+        // CUSTOMER, OWNER만 회원가입 할 수 있음
+        if (userSignupRequestDto.role() != UserRole.CUSTOMER
+                && userSignupRequestDto.role() != UserRole.OWNER) {
             throw new ItsHereException(ErrorCode.INVALID_REQUEST);
         }
 
         // 비밀번호 암호화
-        String encodedPassword = passwordEncoder.encode(userCreateRequestDto.password());
+        String encodedPassword = passwordEncoder.encode(userSignupRequestDto.password());
 
         // 사용자 생성
         UserEntity user = UserEntity.create(
-                userCreateRequestDto.username(),
+                userSignupRequestDto.username(),
                 encodedPassword,
-                userCreateRequestDto.nickname(),
-                userCreateRequestDto.role()
+                userSignupRequestDto.nickname(),
+                userSignupRequestDto.role()
         );
 
         // 사용자 저장
         userRepository.save(user);
-
-        // 생성자 저장
-        user.assignCreatedBy(user.getId());
 
         return new UserResponseDto(user.getId());
     }
@@ -96,15 +110,17 @@ public class UserService {
     @Transactional
     public TokenPairDto reissue(String refreshToken) {
         // JWT 검증
-        jwtProvider.validateToken(refreshToken);
+        if (!jwtProvider.validateToken(refreshToken)) {
+            throw new ItsHereException(ErrorCode.AUTH_UNAUTHORIZED);
+        }
 
         Long userId = jwtProvider.getUserId(refreshToken);
 
         // 사용자 권한 조회
         UserEntity user =
-                userRepository.findById(userId)
+                userRepository.findByIdAndHasDeletedFalse(userId)
                         .orElseThrow(() ->
-                                new ItsHereException(ErrorCode.AUTH_UNAUTHORIZED)
+                                new ItsHereException(ErrorCode.AUTH_FORBIDDEN)
                         );
 
         // 인증된 사용자 정보 가져옴
@@ -124,14 +140,8 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public UserSelfGetResponseDto getSelf() {
-        // SecurityContext에 저장된 현재 로그인 사용자의 PK를 조회
-        Long userId = authenticationFacade.getCurrentUserId();
-
-        // PK를 이용하여 최신 사용자 정보를 조회
-        UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new ItsHereException(ErrorCode.USER_NOT_FOUND)
-                );
+        // 현재 인증된 사용자
+        UserEntity user = getCurrentUser();
 
         // 최신 사용자 정보를 응답 DTO로 변환하여 반환
         return new UserSelfGetResponseDto(
@@ -139,5 +149,27 @@ public class UserService {
                 user.getNickname(),
                 user.getRole()
         );
+    }
+
+    @Transactional
+    public void delete() {
+        // 현재 인증된 사용자
+        UserEntity currentUser = getCurrentUser();
+
+        // Soft Delete 진행 및 감사 필드 작성
+        currentUser.delete(currentUser.getId());
+        currentUser.hasDeleted(true);
+    }
+
+    @Transactional
+    public UserResponseDto update(UserUpdateRequestDto userUpdateRequestDto) {
+        // 현재 인증된 사용자
+        UserEntity currentUser = getCurrentUser();
+
+        // 비밀번호와 활동명 변경
+        currentUser.updatePassword(passwordEncoder.encode(userUpdateRequestDto.password()));
+        currentUser.updateNickname(userUpdateRequestDto.nickname());
+
+        return new UserResponseDto(currentUser.getId());
     }
 }
