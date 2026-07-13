@@ -33,4 +33,8 @@ public class Address extends BaseDeletableEntity {
 
         return addressEntity;
     }
+
+    public void update(String address) {
+        this.address = address;
+    }
 }

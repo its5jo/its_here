@@ -79,19 +79,38 @@ public class AddressService {
         return new AddressResponseDto(address.getId());
     }
 
+    @PreAuthorize("hasAuthority('CUSTOMER')")
     @Transactional
     public AddressResponseDto update(UUID addressId, AddressUpdateRequestDto addressUpdateRequestDto) {
-        return null;
+        // 현재 인증된 사용자 반환
+        UserEntity currentUser = getCurrentUser();
+
+        // 삭제된 주소인지 확인
+        Address address = addressRepository.findByIdAndDeletedAtNull(addressId)
+                .orElseThrow(() -> new ItsHereException(ErrorCode.ADDRESS_NOT_FOUND));
+
+        // 주소를 생성한 사용자가 맞는지 확인
+        if (!address.getUser().getId().equals(currentUser.getId())) {
+            throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
+        }
+
+        // 주소 수정
+        address.update(addressUpdateRequestDto.address());
+
+        return new AddressResponseDto(address.getId());
     }
 
+    @PreAuthorize("hasAuthority('CUSTOMER')")
     @Transactional
     public void delete(UUID addressId) {}
 
+    @PreAuthorize("hasAuthority('CUSTOMER')")
     @Transactional(readOnly = true)
     public AddressGetResponseDto get(UUID addressId) {
         return null;
     }
 
+    @PreAuthorize("hasAuthority('CUSTOMER')")
     @Transactional(readOnly = true)
     public Void getAll() {
         return null;
