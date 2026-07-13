@@ -133,6 +133,38 @@ class StoreRepositoryTest {
                 .isEqualTo(area.getTown());
     }
 
+    @Test
+    @DisplayName("삭제된 가게는 조회되지 않음")
+    void deleted_store_is_not_selected() {
+
+        // given
+        Category category = createCategory("양식" , false);
+        category.assignCreatedBy(userDetails.getUserId());
+
+        Area area = createArea("서울특별시", "강남구", "역삼동");
+        area.assignCreatedBy(userDetails.getUserId());
+
+        Store store = createStore(
+                category,
+                area
+        );
+        store.assignCreatedBy(userDetails.getUserId());
+
+        store.delete(userDetails.getUserId()); // 가게 삭제
+
+        // when
+        Page<StoreGetAllResponseDto> result =
+                storeRepository.getAllStores(
+                        null,
+                        null,
+                        pageable
+                );
+
+        // then
+        assertThat(result.getTotalElements())
+                .isEqualTo(0);
+
+    }
 
     @Test
     @DisplayName("삭제된 카테고리로 필터링하면 조회되지 않음")

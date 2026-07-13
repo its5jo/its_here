@@ -68,7 +68,8 @@ public class StoreRepositoryImpl implements StoreRepositoryCustom {
                 .leftJoin(qStore.area, qArea)
                 .where(
                         storeNameContains(name),
-                        categoryNameEqual(category)
+                        categoryNameEqual(category),
+                        qStore.deletedAt.isNull()
                 )
                 .offset(pageable.getOffset())
                 .orderBy(qStore.createdAt.asc())
@@ -83,7 +84,8 @@ public class StoreRepositoryImpl implements StoreRepositoryCustom {
                 .leftJoin(qStore.category, qCategory)
                 .where(
                         storeNameContains(name),
-                        categoryNameEqual(category)
+                        categoryNameEqual(category),
+                        qStore.deletedAt.isNull()
                 )
                 .fetchOne()
         ).orElse(0L);
