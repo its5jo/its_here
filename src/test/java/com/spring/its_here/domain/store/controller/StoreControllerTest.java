@@ -344,7 +344,7 @@ class StoreControllerTest {
                     .andExpect(jsonPath("$.data.hasOpen")
                             .value(true))
                     .andExpect(jsonPath("$.data.openAt")
-                            .value("9:00"))
+                            .value("09:00"))
                     .andExpect(jsonPath("$.data.closedAt")
                             .value("22:00"));
         }
