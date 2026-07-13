@@ -4,16 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-public record UserCreateRequestDto(
-        @NotBlank(message = "아이디는 필수입니다.")
-        @Size(min = 4, max = 10, message = "아이디는 4자 이상 10자 이하입니다.")
-        @Pattern(
-                regexp = "^[a-z0-9]+$",
-                message = "아이디는 영문 소문자와 숫자만 사용할 수 있습니다."
-        )
-        String username,
-
-        @NotBlank(message = "비밀번호는 필수입니다.")
+public record UserUpdateRequestDto(
+        @NotBlank(message = "기존 비밀번호는 필수입니다.")
         @Size(min = 8, max = 15, message = "비밀번호는 8자 이상 15자 이하입니다.")
         @Pattern(
                 regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^a-zA-Z0-9]).+$",
