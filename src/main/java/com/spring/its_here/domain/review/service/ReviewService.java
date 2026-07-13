@@ -5,7 +5,10 @@ import com.spring.its_here.domain.order.entity.Order;
 import com.spring.its_here.domain.order.enums.OrderStatus;
 import com.spring.its_here.domain.order.repository.OrderRepository;
 import com.spring.its_here.domain.review.dto.request.ReviewCreateRequestDto;
+import com.spring.its_here.domain.review.dto.request.ReviewGetAllRequestDto;
 import com.spring.its_here.domain.review.dto.response.ReviewCreateResponseDto;
+import com.spring.its_here.domain.review.dto.response.ReviewGetAllItemsResponseDto;
+import com.spring.its_here.domain.review.dto.response.ReviewGetAllResponseDto;
 import com.spring.its_here.domain.review.dto.response.ReviewGetOneResponseDto;
 import com.spring.its_here.domain.review.entity.Review;
 import com.spring.its_here.domain.review.repository.ReviewRepository;
@@ -16,10 +19,13 @@ import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
 import com.spring.its_here.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -88,6 +94,34 @@ public class ReviewService {
                 review.getContent(),
                 review.getCreatedAt(),
                 review.getUpdatedAt()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public ReviewGetAllResponseDto getAllReview(
+            ReviewGetAllRequestDto reviewGetAllRequestDto,
+            Pageable pageable
+    ) {
+        Page<Review> reviewPage = reviewRepository.searchReviews(
+                reviewGetAllRequestDto.storeId(),
+                reviewGetAllRequestDto.rating(),
+                pageable
+        );
+
+        List<ReviewGetAllItemsResponseDto> content = reviewPage.getContent()
+                .stream()
+                .map(review -> new ReviewGetAllItemsResponseDto(
+                        review.getId(),
+                        review.getUser().getId(),
+                        review.getRating(),
+                        review.getContent(),
+                        review.getCreatedAt()
+                )).toList();
+        PageInfo pageInfo = PageInfo.from(reviewPage);
+
+        return new ReviewGetAllResponseDto(
+                content,
+                pageInfo
         );
     }
 }
