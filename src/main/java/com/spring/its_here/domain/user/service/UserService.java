@@ -45,7 +45,7 @@ public class UserService {
         Long userId = authenticationFacade.getCurrentUserId();
 
         // PK를 이용하여 최신 사용자 정보를 조회
-        return userRepository.findById(userId)
+        return userRepository.findByIdAndHasDeletedFalse(userId)
                 .orElseThrow(() ->
                         new ItsHereException(ErrorCode.USER_NOT_FOUND)
                 );
@@ -110,15 +110,17 @@ public class UserService {
     @Transactional
     public TokenPairDto reissue(String refreshToken) {
         // JWT 검증
-        jwtProvider.validateToken(refreshToken);
+        if (!jwtProvider.validateToken(refreshToken)) {
+            throw new ItsHereException(ErrorCode.AUTH_UNAUTHORIZED);
+        }
 
         Long userId = jwtProvider.getUserId(refreshToken);
 
         // 사용자 권한 조회
         UserEntity user =
-                userRepository.findById(userId)
+                userRepository.findByIdAndHasDeletedFalse(userId)
                         .orElseThrow(() ->
-                                new ItsHereException(ErrorCode.AUTH_UNAUTHORIZED)
+                                new ItsHereException(ErrorCode.AUTH_FORBIDDEN)
                         );
 
         // 인증된 사용자 정보 가져옴
@@ -141,11 +143,6 @@ public class UserService {
         // 현재 인증된 사용자
         UserEntity user = getCurrentUser();
 
-        // 삭제된 사용자일 경우
-        if (user.getHasDeleted()) {
-            throw new ItsHereException(ErrorCode.USER_NOT_FOUND);
-        }
-
         // 최신 사용자 정보를 응답 DTO로 변환하여 반환
         return new UserSelfGetResponseDto(
                 user.getUsername(),
@@ -155,39 +152,24 @@ public class UserService {
     }
 
     @Transactional
-    public void delete(Long userId) {
+    public void delete() {
         // 현재 인증된 사용자
         UserEntity currentUser = getCurrentUser();
 
-        // 다른 사용자를 삭제 요청한 경우
-        if (!currentUser.getId().equals(userId)) {
-            throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
-        }
-
-        // 이미 삭제된 사용자일 경우
-        if (currentUser.getHasDeleted()) {
-            throw new ItsHereException(ErrorCode.USER_NOT_FOUND);
-        }
-
         // Soft Delete 진행 및 감사 필드 작성
-        currentUser.delete(userId);
+        currentUser.delete(currentUser.getId());
         currentUser.hasDeleted(true);
     }
 
     @Transactional
-    public UserResponseDto update(Long userId, UserUpdateRequestDto userUpdateRequestDto) {
+    public UserResponseDto update(UserUpdateRequestDto userUpdateRequestDto) {
         // 현재 인증된 사용자
         UserEntity currentUser = getCurrentUser();
-
-        // 다른 유저의 정보 수정을 요청할 경우
-        if (!currentUser.getId().equals(userId)) {
-            throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
-        }
 
         // 비밀번호와 활동명 변경
         currentUser.updatePassword(passwordEncoder.encode(userUpdateRequestDto.password()));
         currentUser.updateNickname(userUpdateRequestDto.nickname());
 
-        return new UserResponseDto(userId);
+        return new UserResponseDto(currentUser.getId());
     }
 }

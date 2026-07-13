@@ -132,14 +132,12 @@ public class UserController {
     }
 
     @Operation(
-            summary = "사용자 삭제",
-            description = "권한이 있는 사용자가 본인의 정보를 삭제합니다."
+            summary = "내 정보 삭제",
+            description = "권한이 있는 사용자가 자신의 정보를 삭제합니다."
     )
-    @DeleteMapping("/{userId}")
-    public ResponseEntity<Void> deleteUser(
-            @PathVariable Long userId
-    ) {
-        userService.delete(userId);
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> deleteUser() {
+        userService.delete();
 
         return ResponseEntity
                 .noContent()
@@ -147,19 +145,18 @@ public class UserController {
     }
 
     @Operation(
-            summary = "사용자 수정",
-            description = "권한이 있는 사용자가 본인의 정보를 수정합니다."
+            summary = "내 정보 수정",
+            description = "권한이 있는 사용자가 자신의 정보를 수정합니다."
     )
-    @PutMapping("/{userId}")
+    @PutMapping("/me")
     public ResponseEntity<ApiResponse<UserResponseDto>> updateUser(
-            @PathVariable Long userId,
             @Valid @RequestBody UserUpdateRequestDto userUpdateRequestDto
     ) {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(
-                        "사용자 수정 성공",
-                        userService.update(userId, userUpdateRequestDto)
+                        "내 정보 수정 성공",
+                        userService.update(userUpdateRequestDto)
                 ));
     }
 }
