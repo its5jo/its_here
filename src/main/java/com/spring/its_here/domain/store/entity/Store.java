@@ -82,6 +82,13 @@ public class Store extends BaseDeletableEntity {
         this.reviewTotalCount += 1;
     }
 
+    public double calculateAverageRating() {
+        if(reviewTotalCount == 0){
+            return 0.0;
+        }
+        return Math.round((reviewTotalRating / reviewTotalCount) * 10) / 10.0;
+    }
+
     // 수정 메서드
 
     // 삭제 메서드

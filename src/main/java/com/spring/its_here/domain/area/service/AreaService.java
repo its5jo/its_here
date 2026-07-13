@@ -45,7 +45,6 @@ public class AreaService {
                 areaCreateRequestDto.district(),
                 areaCreateRequestDto.town()
         );
-        area.assignCreatedBy(userId);
 
         Area areaSave = areaRepository.save(area);
 
