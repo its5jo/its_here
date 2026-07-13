@@ -1,8 +1,10 @@
 package com.spring.its_here.domain.product.controller.docs;
 
 import com.spring.its_here.domain.product.dto.request.ProductCreateRequestDto;
+import com.spring.its_here.domain.product.dto.request.ProductUpdateRequestDto;
 import com.spring.its_here.domain.product.dto.response.ProductCreateResponseDto;
 import com.spring.its_here.domain.product.dto.response.ProductResponseDto;
+import com.spring.its_here.domain.product.dto.response.ProductUpdateResponseDto;
 import com.spring.its_here.global.advice.ErrorResponse;
 import com.spring.its_here.global.response.ApiResponse;
 import com.spring.its_here.global.security.CustomUserDetails;
@@ -61,6 +63,84 @@ public interface ProductApi {
     );
 
     @Operation(
+            summary = "상품 수정",
+            description = "가게 소유자가 자신이 소유한 가게의 상품 정보를 수정합니다.",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "200",
+                            description = "상품 수정 성공"
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "403",
+                            description = "상품 수정 권한 없음",
+                            content = @Content(
+                                    schema = @Schema(implementation = ErrorResponse.class)
+                            )
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "404",
+                            description = "사용자 또는 상품을 찾을 수 없음",
+                            content = @Content(
+                                    schema = @Schema(implementation = ErrorResponse.class)
+                            )
+                    )
+            }
+    )
+    ResponseEntity<ApiResponse<ProductUpdateResponseDto>> updateProduct(
+            @Parameter(hidden = true)
+            CustomUserDetails userDetails,
+
+            @Parameter(
+                    description = "상품 ID",
+                    required = true,
+                    example = "550e8400-e29b-41d4-a716-446655440000"
+            )
+            UUID productId,
+
+            @Parameter(
+                    description = "상품 수정 정보",
+                    required = true
+            )
+            ProductUpdateRequestDto request
+    );
+
+    @Operation(
+            summary = "상품 삭제",
+            description = "가게 소유자가 자신이 소유한 가게의 상품을 삭제합니다.",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "204",
+                            description = "상품 삭제 성공"
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "403",
+                            description = "상품 삭제 권한 없음",
+                            content = @Content(
+                                    schema = @Schema(implementation = ErrorResponse.class)
+                            )
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "404",
+                            description = "사용자 또는 상품을 찾을 수 없음",
+                            content = @Content(
+                                    schema = @Schema(implementation = ErrorResponse.class)
+                            )
+                    )
+            }
+    )
+    ResponseEntity<Void> deleteProduct(
+            @Parameter(hidden = true)
+            CustomUserDetails userDetails,
+
+            @Parameter(
+                    description = "상품 ID",
+                    required = true,
+                    example = "550e8400-e29b-41d4-a716-446655440000"
+            )
+            UUID productId
+    );
+
+    @Operation(
             summary = "상품 단건 조회",
             description = "상품 ID를 이용해 상품 정보를 조회합니다.",
             responses = {
@@ -73,7 +153,10 @@ public interface ProductApi {
                     ),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "404",
-                            description = "상품을 찾을 수 없음"
+                            description = "상품을 찾을 수 없음",
+                            content = @Content(
+                                    schema = @Schema(implementation = ErrorResponse.class)
+                            )
                     )
             }
     )
