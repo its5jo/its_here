@@ -15,10 +15,10 @@ public record StoreGetOneResponseDto(
         Double rating,
         Boolean hasOpen,
 
-        @JsonFormat(pattern = "H:mm")
+        @JsonFormat(pattern = "HH:mm")
         LocalTime openAt,
 
-        @JsonFormat(pattern = "H:mm")
+        @JsonFormat(pattern = "HH:mm")
         LocalTime closedAt
 ) {
 

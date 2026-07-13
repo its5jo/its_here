@@ -29,10 +29,10 @@ public record StoreCreateRequestDto(
         @NotNull(message = "카테고리 id는 필수입니다.")
         UUID categoryId,
 
-        @JsonFormat(pattern = "H:mm")
+        @JsonFormat(pattern = "HH:mm")
         LocalTime openAt,
 
-        @JsonFormat(pattern = "H:mm")
+        @JsonFormat(pattern = "HH:mm")
         LocalTime closedAt
 
 ) {
