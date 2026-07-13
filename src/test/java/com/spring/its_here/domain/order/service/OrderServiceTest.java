@@ -120,7 +120,6 @@ class OrderServiceTest {
             assertThat(response.orderId()).isEqualTo(ORDER_ID);
             assertThat(response.totalAmount()).isEqualTo(20000);
 
-            // verify(userRepository).findById(USER_ID);  ← 이 줄 제거
             verify(storeRepository).findById(STORE_ID);
             verify(productRepository).findAllById(anyList());
             verify(orderRepository).save(any(Order.class));
@@ -138,7 +137,7 @@ class OrderServiceTest {
                     () -> orderService.create(requestDto, USER_ID)
             );
 
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.STORE_NOT_FOUND);  // ✅
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.STORE_NOT_FOUND);
         }
 
         @Test
@@ -152,7 +151,7 @@ class OrderServiceTest {
                     () -> orderService.create(requestDto, USER_ID)
             );
 
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.STORE_NOT_FOUND);  // ✅
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.STORE_NOT_FOUND);
         }
 
         @Test
@@ -167,7 +166,7 @@ class OrderServiceTest {
                     () -> orderService.create(requestDto, USER_ID)
             );
 
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.STORE_CLOSED);  // ✅
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.STORE_CLOSED);
         }
 
         @Test
@@ -183,7 +182,7 @@ class OrderServiceTest {
                     () -> orderService.create(requestDto, USER_ID)
             );
 
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);  // ✅
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
         }
     }
 

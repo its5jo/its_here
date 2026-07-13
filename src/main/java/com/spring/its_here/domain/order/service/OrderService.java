@@ -46,7 +46,6 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderProductRepository orderProductRepository;
-    private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final StoreRepository storeRepository;
     private final PaymentService paymentService;
@@ -91,7 +90,7 @@ public class OrderService {
 
         // CUSTOMER - 본인 주문만 조회
         if (role == UserRole.CUSTOMER && !order.getUserId().equals(userId)) {
-            throw new ItsHereException(ErrorCode.FORBIDDEN_ORDER_ACCESS);
+            throw new ItsHereException(ErrorCode.ORDER_ACCESS_FORBIDDEN);
         }
 
         // OWNER - 본인 가게 주문만 조회
@@ -99,10 +98,9 @@ public class OrderService {
             Store store = storeRepository.findByUserIdAndDeletedAtIsNull(userId)
                     .orElseThrow(() -> new ItsHereException(ErrorCode.STORE_NOT_FOUND));
             if (!order.getStoreId().equals(store.getId())) {
-                throw new ItsHereException(ErrorCode.FORBIDDEN_ORDER_ACCESS);
+                throw new ItsHereException(ErrorCode.ORDER_ACCESS_FORBIDDEN);
             }
         }
-
 
         List<OrderProduct> orderProducts = orderProductRepository.findAllByOrderId(orderId);
         PaymentResponseDto payment = paymentService.getPaymentByOrderId(orderId);
