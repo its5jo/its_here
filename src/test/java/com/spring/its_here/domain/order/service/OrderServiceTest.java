@@ -252,7 +252,7 @@ class OrderServiceTest {
             );
 
             // then
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN_ORDER_ACCESS);
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ORDER_ACCESS_FORBIDDEN);
             verifyNoInteractions(orderProductRepository, paymentService);
         }
 
