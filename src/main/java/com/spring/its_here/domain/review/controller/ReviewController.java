@@ -7,10 +7,13 @@ import com.spring.its_here.domain.review.dto.response.ReviewCreateResponseDto;
 import com.spring.its_here.domain.review.dto.response.ReviewGetAllResponseDto;
 import com.spring.its_here.domain.review.dto.response.ReviewGetOneResponseDto;
 import com.spring.its_here.domain.review.service.ReviewService;
+import com.spring.its_here.global.advice.ErrorCode;
+import com.spring.its_here.global.advice.ItsHereException;
 import com.spring.its_here.global.response.ApiResponse;
 import com.spring.its_here.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -62,14 +65,38 @@ public class ReviewController {
             )
             Pageable pageable
     ) {
+        validatorSortBy(pageable);
+        Pageable normalizeSize = normalizeSize(pageable);
+
         ReviewGetAllResponseDto reviewGetAllResponseDto = reviewService.getAllReview(
                 reviewGetAllRequestDto,
-                pageable
+                normalizeSize
         );
 
         return ResponseEntity.ok(ApiResponse.success(
                 "리뷰 전체 조회 성공",
                 reviewGetAllResponseDto
         ));
+    }
+
+    private Pageable normalizeSize(Pageable pageable) {
+        int size = pageable.getPageSize();
+
+        if (size != 10 && size != 30 && size != 50) {
+            size = 10;
+        }
+        return PageRequest.of(
+                pageable.getPageNumber(),
+                size,
+                pageable.getSort()
+        );
+    }
+
+    private void validatorSortBy(Pageable pageable) {
+        for (Sort.Order order : pageable.getSort()) {
+            if (!order.getProperty().equals("createdAt")) {
+                throw new ItsHereException(ErrorCode.REVIEW_INVALID_SORT_BY);
+            }
+        }
     }
 }

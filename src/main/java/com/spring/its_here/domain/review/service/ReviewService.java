@@ -17,6 +17,7 @@ import com.spring.its_here.domain.store.repository.StoreRepository;
 import com.spring.its_here.domain.user.entity.UserEntity;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
+import com.spring.its_here.global.response.OffsetPageInfo;
 import com.spring.its_here.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -117,7 +118,7 @@ public class ReviewService {
                         review.getContent(),
                         review.getCreatedAt()
                 )).toList();
-        PageInfo pageInfo = PageInfo.from(reviewPage);
+        OffsetPageInfo pageInfo = OffsetPageInfo.from(reviewPage);
 
         return new ReviewGetAllResponseDto(
                 content,

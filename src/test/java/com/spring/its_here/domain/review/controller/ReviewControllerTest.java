@@ -11,6 +11,7 @@ import com.spring.its_here.domain.review.service.ReviewService;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
 import com.spring.its_here.global.config.SecurityConfig;
+import com.spring.its_here.global.response.OffsetPageInfo;
 import com.spring.its_here.global.security.CustomUserDetails;
 import com.spring.its_here.global.security.CustomUserDetailsService;
 import com.spring.its_here.global.security.JwtProvider;
@@ -36,7 +37,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -215,7 +217,7 @@ class ReviewControllerTest {
                     "content",
                     Instant.parse("2026-07-07T06:00:00Z")
             );
-            PageInfo pageInfo = new PageInfo(
+            OffsetPageInfo pageInfo = new OffsetPageInfo(
                     "OFFSET",
                     false,
                     1L,
@@ -247,16 +249,47 @@ class ReviewControllerTest {
             );
         }
 
-        @Test
+        @ParameterizedTest
+        @ValueSource(ints = {1, 20, 40})
         @DisplayName("조회개수가 10, 30, 50이 아니면 10건으로 조회")
-        void getAllReview_invalid_size() throws Exception {
+        void getAllReview_invalid_size(int size) throws Exception {
+            OffsetPageInfo pageInfo = new OffsetPageInfo(
+                    "OFFSET",
+                    false,
+                    0L,
+                    "createdAt",
+                    "DESC"
+            );
+            ReviewGetAllResponseDto reviewGetAllResponseDto = new ReviewGetAllResponseDto(
+                    List.of(),
+                    pageInfo
+            );
 
+            given(reviewService.getAllReview(
+                    any(ReviewGetAllRequestDto.class),
+                    any(Pageable.class)
+            )).willReturn(reviewGetAllResponseDto);
+
+            mockMvc.perform(get("/api/reviews")
+                            .param("size", String.valueOf(size)))
+                    .andExpect(status().isOk());
+
+            verify(reviewService).getAllReview(
+                    any(ReviewGetAllRequestDto.class),
+                    any(Pageable.class)
+            );
         }
 
         @Test
         @DisplayName("정렬 기준이 createdAt이 아니면 예외")
         void getAllReview_invalid_sort() throws Exception {
+            mockMvc.perform(get("/api/reviews")
+                            .param("size", "10")
+                            .param("sort", "updatedAt, desc"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(ErrorCode.REVIEW_INVALID_SORT_BY.getCode()));
 
+            verify(reviewService, never()).getAllReview(any(), any());
         }
     }
 }

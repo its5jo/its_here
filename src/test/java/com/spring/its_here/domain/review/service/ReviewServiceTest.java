@@ -1,6 +1,5 @@
 package com.spring.its_here.domain.review.service;
 
-import com.spring.its_here.domain.area.dto.response.AreaGetOneResponseDto;
 import com.spring.its_here.domain.area.entity.Area;
 import com.spring.its_here.domain.category.entity.Category;
 import com.spring.its_here.domain.order.entity.Order;
@@ -25,18 +24,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
-
-import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 
@@ -356,6 +353,12 @@ class ReviewServiceTest {
             assertThat(itsHereException.getErrorCode()).isEqualTo(ErrorCode.REVIEW_NOT_FOUND);
 
             verify(reviewRepository).findByIdAndDeletedAtIsNull(reviewId);
+        }
+        
+        @Test
+        @DisplayName("전체조회 성공")
+        void getAllReview_success(){
+            
         }
     }
 }
