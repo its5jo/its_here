@@ -67,8 +67,10 @@ public class StoreController {
     }
 
     @DeleteMapping("/{storeId}")
-    public ResponseEntity<Void> deleteStore(@PathVariable UUID storeId){
-        storeService.deleteStore(storeId);
+    public ResponseEntity<Void> deleteStore(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID storeId){
+        storeService.deleteStore(userDetails, storeId);
         return ResponseEntity
                 .noContent()
                 .build();

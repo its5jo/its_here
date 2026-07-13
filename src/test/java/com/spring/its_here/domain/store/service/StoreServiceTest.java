@@ -1241,4 +1241,220 @@ class StoreServiceTest {
 
     }
 
+    @DisplayName("가게 삭제")
+    @Nested
+    class DeleteStore{
+
+        @Test
+        @DisplayName("성공")
+        void success() {
+
+            // given
+            UUID storeId = UUID.randomUUID();
+
+            UserEntity user = UserEntity.create(
+                    "owner1",
+                    "oWNER1!!",
+                    "갓생",
+                    UserRole.OWNER
+            );
+
+            // Reflection으로 PK를 넣어줌
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            CustomUserDetails userDetails =
+                    new CustomUserDetails(user);
+
+            Category category = Category.createCategory("일식", false);
+
+            Area area = Area.create("서울특별시", "강남구", "삼성동");
+
+            Store store = Store.createStore(
+                    "오레노라멘 강남점",
+                    "서울 강남구",
+                    user,
+                    category,
+                    area,
+                    true,
+                    LocalTime.of(11, 0),
+                    LocalTime.of(22, 0)
+            );
+
+            // 모든 검증을 통과한다고 가정
+            when(storeRepository.findByIdAndDeletedAtIsNull(storeId))
+                    .thenReturn(Optional.of(store));
+
+            // 서비스 호출
+            storeService.deleteStore(userDetails, storeId);
+
+            // 검증
+            assertThat(store.getDeletedAt()).isNotNull();
+
+            assertThat(store.getDeletedBy()).isEqualTo(userDetails.getUserId());
+
+            // Repository 호출 검증
+            verify(storeRepository).findByIdAndDeletedAtIsNull(storeId);
+
+        }
+
+        @Test
+        @DisplayName("관리자가 가게 삭제")
+        void success_delete_store_by_master() {
+
+            // given
+            UUID storeId = UUID.randomUUID();
+
+            UserEntity user = UserEntity.create(
+                    "owner1",
+                    "oWNER1!!",
+                    "찐주인",
+                    UserRole.OWNER
+            );
+
+            // Reflection으로 PK를 넣어줌
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            UserEntity master = UserEntity.create(
+                    "master1",
+                    "MASTEr!!",
+                    "마스터",
+                    UserRole.MASTER
+            );
+
+            // Reflection으로 PK를 넣어줌
+            ReflectionTestUtils.setField(master, "id", 2L);
+
+            CustomUserDetails userDetails =
+                    new CustomUserDetails(master);
+
+            Category category = Category.createCategory("일식", false);
+
+            Area area = Area.create("서울특별시", "강남구", "삼성동");
+
+            Store store = Store.createStore(
+                    "오레노라멘 강남점",
+                    "서울 강남구",
+                    user,
+                    category,
+                    area,
+                    true,
+                    LocalTime.of(11, 0),
+                    LocalTime.of(22, 0)
+            );
+
+            // 모든 검증을 통과한다고 가정
+            when(storeRepository.findByIdAndDeletedAtIsNull(storeId))
+                    .thenReturn(Optional.of(store));
+
+            // 서비스 호출
+            storeService.deleteStore(userDetails, storeId);
+
+            // 검증
+            assertThat(store.getDeletedAt()).isNotNull();
+
+            assertThat(store.getDeletedBy()).isEqualTo(userDetails.getUserId());
+
+            // Repository 호출 검증
+            verify(storeRepository).findByIdAndDeletedAtIsNull(storeId);
+
+        }
+
+        @Test
+        @DisplayName("없거나 삭제된 가게에 대해 삭제 시도")
+        void not_exists_or_deleted_store() {
+
+            // given
+            UUID storeId = UUID.randomUUID();
+
+            UserEntity user = UserEntity.create(
+                    "owner1",
+                    "Owner1!!",
+                    "찐주인",
+                    UserRole.OWNER
+            );
+
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            CustomUserDetails userDetails =
+                    new CustomUserDetails(user);
+
+            // 가게가 삭제되거나 없다고 가정
+            when(storeRepository.findByIdAndDeletedAtIsNull(storeId))
+                    .thenReturn(Optional.empty());
+
+            // when
+            ItsHereException exception =
+                    assertThrows(
+                            ItsHereException.class,
+                            () -> storeService.deleteStore(userDetails, storeId)
+                    );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.STORE_NOT_FOUND);
+
+        }
+
+        @Test
+        @DisplayName("가게 주인이 다른 사람의 가게 삭제 시도")
+        void owner_try_to_delete_others_store() {
+
+            // given
+            UUID storeId = UUID.randomUUID();
+
+            UserEntity user = UserEntity.create(
+                    "owner1",
+                    "Owner1!!",
+                    "찐주인",
+                    UserRole.OWNER
+            );
+
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            UserEntity user2 = UserEntity.create(
+                    "notOwner",
+                    "NotOwner1!!",
+                    "주인아님",
+                    UserRole.OWNER
+            );
+
+            ReflectionTestUtils.setField(user2, "id", 2L);
+
+            CustomUserDetails userDetails =
+                    new CustomUserDetails(user2);
+
+            Category category = Category.createCategory("중식", false);
+
+            Area area = Area.create("서울특별시", "강남구", "삼성동");
+
+            Store store = Store.createStore(
+                    "희래궁 역삼점",
+                    "서울 강남구",
+                    user,
+                    category,
+                    area,
+                    true,
+                    LocalTime.of(9, 0),
+                    LocalTime.of(22, 0)
+            );
+
+            // 가게가 삭제되거나 없다고 가정
+            when(storeRepository.findByIdAndDeletedAtIsNull(storeId))
+                    .thenReturn(Optional.of(store));
+
+            // when
+            ItsHereException exception =
+                    assertThrows(
+                            ItsHereException.class,
+                            () -> storeService.deleteStore(userDetails, storeId)
+                    );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.STORE_NOT_OWNED);
+
+        }
+
+    }
+
 }

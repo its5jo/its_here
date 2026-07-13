@@ -26,6 +26,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalTime;
@@ -514,7 +515,10 @@ class StoreControllerTest {
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(requestDto))
                     )
-                    .andExpect(status().isNotFound());
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.code")
+                            .value("S-001"));
+
         }
 
         @Test
@@ -539,10 +543,60 @@ class StoreControllerTest {
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(requestDto))
                     )
-                    .andExpect(status().isBadRequest());
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code")
+                    .value("CM-005"));
 
             verify(storeService, never())
                     .updateStore(any(), any(), any());
+        }
+
+    }
+
+    @Nested
+    @DisplayName("가게 삭제")
+    class DeleteStore{
+
+        @Test
+        @DisplayName("성공")
+        void success() throws Exception {
+
+            UUID storeId = UUID.randomUUID();
+
+            mockMvc.perform(
+                            delete("/api/stores/{storeId}", storeId)
+                    )
+                    .andExpect(status().isNoContent());
+
+            verify(storeService)
+                    .deleteStore(any(), eq(storeId));
+        }
+
+        @Test
+        @DisplayName("가게 주인이 다른 사람 가게 삭제 시도")
+        @WithMockUser(
+                username = "owner2",
+                authorities = "OWNER"
+        )
+        void fail_when_owner_try_to_others_store() throws Exception {
+
+            // given
+            UUID storeId = UUID.randomUUID();
+
+            doThrow(new ItsHereException(ErrorCode.STORE_NOT_OWNED))
+                    .when(storeService)
+                    .deleteStore(any(), any());
+
+            // when & then
+            mockMvc.perform(
+                            delete("/api/stores/{storeId}", storeId)
+                    )
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code")
+                            .value("S-004"));
+
+            verify(storeService)
+                    .deleteStore(any(), eq(storeId));
         }
 
     }

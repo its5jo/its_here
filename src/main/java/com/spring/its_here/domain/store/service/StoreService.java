@@ -101,8 +101,15 @@ public class StoreService {
         return StoreUpdateResponseDto.from(store);
     }
 
+    @PreAuthorize("hasAnyAuthority('OWNER','MANAGER','MASTER')")
     @Transactional
-    public void deleteStore(UUID storeId) {
+    public void deleteStore(CustomUserDetails userDetails, UUID storeId) {
+
+        Store store = findStoreByIdAndNotDeleted(storeId);
+
+        validateStoreOwner(userDetails, store.getUser().getId());
+
+        store.delete(userDetails.getUserId());
 
     }
 
