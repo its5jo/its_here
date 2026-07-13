@@ -413,4 +413,174 @@ class AddressServiceTest {
                     .findByIdAndDeletedAtNull(any());
         }
     }
+
+    @Nested
+    @DisplayName("주소 삭제 API 테스트")
+    class DeleteTest {
+        @Test
+        @DisplayName("주소 삭제 성공")
+        void delete_success() {
+            // given
+            UUID addressId = UUID.randomUUID();
+
+            UserEntity user = UserEntity.create(
+                    "test",
+                    "encodedPassword",
+                    "테스터",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            Address address = Address.create(
+                    "서울특별시 강남구",
+                    user
+            );
+
+            ReflectionTestUtils.setField(address, "id", addressId);
+
+            when(authenticationFacade.getCurrentUserId())
+                    .thenReturn(1L);
+
+            when(userRepository.findByIdAndHasDeletedFalse(1L))
+                    .thenReturn(Optional.of(user));
+
+            when(addressRepository.findByIdAndDeletedAtNull(addressId))
+                    .thenReturn(Optional.of(address));
+
+            // when
+            addressService.delete(addressId);
+
+            // then
+            assertThat(address.getDeletedAt()).isNotNull();
+            assertThat(address.getDeletedBy()).isEqualTo(1L);
+
+            verify(authenticationFacade).getCurrentUserId();
+            verify(userRepository).findByIdAndHasDeletedFalse(1L);
+            verify(addressRepository).findByIdAndDeletedAtNull(addressId);
+        }
+
+        @Test
+        @DisplayName("주소 삭제 실패 - 주소가 존재하지 않음")
+        void delete_fail_addressNotFound() {
+            // given
+            UUID addressId = UUID.randomUUID();
+
+            UserEntity user = UserEntity.create(
+                    "test",
+                    "encodedPassword",
+                    "테스터",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            when(authenticationFacade.getCurrentUserId())
+                    .thenReturn(1L);
+
+            when(userRepository.findByIdAndHasDeletedFalse(1L))
+                    .thenReturn(Optional.of(user));
+
+            when(addressRepository.findByIdAndDeletedAtNull(addressId))
+                    .thenReturn(Optional.empty());
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> addressService.delete(addressId)
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.ADDRESS_NOT_FOUND);
+
+            verify(authenticationFacade).getCurrentUserId();
+            verify(userRepository).findByIdAndHasDeletedFalse(1L);
+            verify(addressRepository).findByIdAndDeletedAtNull(addressId);
+        }
+
+        @Test
+        @DisplayName("주소 삭제 실패 - 본인의 주소가 아님")
+        void delete_fail_forbidden() {
+            // given
+            UUID addressId = UUID.randomUUID();
+
+            UserEntity currentUser = UserEntity.create(
+                    "current",
+                    "encodedPassword",
+                    "현재사용자",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(currentUser, "id", 1L);
+
+            UserEntity otherUser = UserEntity.create(
+                    "other",
+                    "encodedPassword",
+                    "다른사용자",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(otherUser, "id", 2L);
+
+            Address address = Address.create(
+                    "서울특별시 강남구",
+                    otherUser
+            );
+
+            ReflectionTestUtils.setField(address, "id", addressId);
+
+            when(authenticationFacade.getCurrentUserId())
+                    .thenReturn(1L);
+
+            when(userRepository.findByIdAndHasDeletedFalse(1L))
+                    .thenReturn(Optional.of(currentUser));
+
+            when(addressRepository.findByIdAndDeletedAtNull(addressId))
+                    .thenReturn(Optional.of(address));
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> addressService.delete(addressId)
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.AUTH_FORBIDDEN);
+
+            verify(authenticationFacade).getCurrentUserId();
+            verify(userRepository).findByIdAndHasDeletedFalse(1L);
+            verify(addressRepository).findByIdAndDeletedAtNull(addressId);
+        }
+
+        @Test
+        @DisplayName("주소 삭제 실패 - 사용자가 존재하지 않음")
+        void delete_fail_userNotFound() {
+            // given
+            UUID addressId = UUID.randomUUID();
+
+            when(authenticationFacade.getCurrentUserId())
+                    .thenReturn(1L);
+
+            when(userRepository.findByIdAndHasDeletedFalse(1L))
+                    .thenReturn(Optional.empty());
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> addressService.delete(addressId)
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.USER_NOT_FOUND);
+
+            verify(authenticationFacade).getCurrentUserId();
+            verify(userRepository).findByIdAndHasDeletedFalse(1L);
+
+            verify(addressRepository, never())
+                    .findByIdAndDeletedAtNull(any(UUID.class));
+        }
+    }
 }
