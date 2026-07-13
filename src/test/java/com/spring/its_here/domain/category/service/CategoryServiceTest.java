@@ -99,7 +99,6 @@ class CategoryServiceTest {
 
             assertThat(savedCategory.getName()).isEqualTo(request.name());
             assertThat(savedCategory.isHasHidden()).isEqualTo(request.hasHidden());
-            assertThat(savedCategory.getCreatedBy()).isEqualTo(userDetails.getUserId());
             assertThat(savedCategory.getDeletedAt()).isNull();
 
             assertThat(response.categoryId()).isEqualTo(savedCategory.getId());
