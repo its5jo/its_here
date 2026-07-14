@@ -2,8 +2,8 @@ package com.spring.its_here.domain.order.service;
 
 import com.spring.its_here.domain.order.dto.request.OrderCreateRequestDto;
 import com.spring.its_here.domain.order.dto.request.OrderProductRequestDto;
+import com.spring.its_here.domain.order.dto.response.OrderListResponseDto;
 import com.spring.its_here.domain.order.dto.response.OrderResponseDto;
-import com.spring.its_here.domain.order.dto.response.OrderSummaryResponseDto;
 import com.spring.its_here.domain.order.entity.Order;
 import com.spring.its_here.domain.order.enums.OrderStatus;
 import com.spring.its_here.domain.order.repository.OrderProductRepository;
@@ -18,10 +18,8 @@ import com.spring.its_here.domain.store.entity.Store;
 import com.spring.its_here.domain.store.repository.StoreRepository;
 import com.spring.its_here.domain.user.entity.UserEntity;
 import com.spring.its_here.domain.user.enums.UserRole;
-import com.spring.its_here.domain.user.repository.UserRepository;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
-import com.spring.its_here.global.response.PageResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -32,9 +30,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
@@ -53,7 +49,6 @@ class OrderServiceTest {
 
     @Mock private OrderRepository orderRepository;
     @Mock private OrderProductRepository orderProductRepository;
-    @Mock private UserRepository userRepository;
     @Mock private ProductRepository productRepository;
     @Mock private StoreRepository storeRepository;
     @Mock private PaymentService paymentService;
@@ -304,11 +299,11 @@ class OrderServiceTest {
                     .thenReturn(emptyPage);
 
             // when
-            PageResponse<OrderSummaryResponseDto> response =
+            OrderListResponseDto response =
                     orderService.getOrderList(0, 10, USER_ID, UserRole.CUSTOMER, null);
 
             // then
-            assertThat(response.totalElements()).isEqualTo(0);
+            assertThat(response.pageInfo().totalCount()).isEqualTo(0);
             verify(orderRepository).findByUserIdAndDeletedAtIsNull(eq(USER_ID), any(Pageable.class));
         }
 
@@ -322,11 +317,11 @@ class OrderServiceTest {
                     .thenReturn(emptyPage);
 
             // when
-            PageResponse<OrderSummaryResponseDto> response =
+            OrderListResponseDto response =
                     orderService.getOrderList(0, 10, USER_ID, UserRole.CUSTOMER, OrderStatus.REQUESTED);
 
             // then
-            assertThat(response.totalElements()).isEqualTo(0);
+            assertThat(response.pageInfo().totalCount()).isEqualTo(0);
             verify(orderRepository).findByUserIdAndStatusAndDeletedAtIsNull(
                     eq(USER_ID), eq(OrderStatus.REQUESTED), any(Pageable.class));
         }
@@ -340,7 +335,7 @@ class OrderServiceTest {
                     .thenReturn(emptyPage);
 
             // when
-            PageResponse<OrderSummaryResponseDto> response =
+            OrderListResponseDto response =
                     orderService.getOrderList(0, 10, USER_ID, UserRole.MANAGER, null);
 
             // then
