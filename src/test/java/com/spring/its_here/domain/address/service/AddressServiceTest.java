@@ -2,9 +2,11 @@ package com.spring.its_here.domain.address.service;
 
 import com.spring.its_here.domain.address.dto.request.AddressCreateRequestDto;
 import com.spring.its_here.domain.address.dto.request.AddressUpdateRequestDto;
+import com.spring.its_here.domain.address.dto.response.AddressGetAllResponseDto;
 import com.spring.its_here.domain.address.dto.response.AddressGetResponseDto;
 import com.spring.its_here.domain.address.dto.response.AddressResponseDto;
 import com.spring.its_here.domain.address.entity.Address;
+import com.spring.its_here.domain.address.pageable.PageablePolicy;
 import com.spring.its_here.domain.address.repository.AddressRepository;
 import com.spring.its_here.domain.user.entity.UserEntity;
 import com.spring.its_here.domain.user.enums.UserRole;
@@ -19,12 +21,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -40,6 +47,9 @@ class AddressServiceTest {
 
     @Mock
     private AuthenticationFacade authenticationFacade;
+
+    @Mock
+    private PageablePolicy pageablePolicy;
 
     @InjectMocks
     private AddressService addressService;
@@ -752,6 +762,210 @@ class AddressServiceTest {
 
             verify(addressRepository, never())
                     .findByIdAndDeletedAtNull(any(UUID.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("주소 목록 조회 API 테스트")
+    class GetAllTest {
+        @Test
+        @DisplayName("주소 목록 조회 성공 - 검색어 없음")
+        void getAll_success_withoutKeyword() {
+            // given
+            Pageable pageable = PageRequest.of(0, 10);
+
+            UserEntity user = UserEntity.create(
+                    "test",
+                    "encodedPassword",
+                    "테스터",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            Address address1 = Address.create("서울 강남구", user);
+            Address address2 = Address.create("서울 송파구", user);
+
+            ReflectionTestUtils.setField(address1, "id", UUID.randomUUID());
+            ReflectionTestUtils.setField(address2, "id", UUID.randomUUID());
+
+            Page<Address> page = new PageImpl<>(
+                    List.of(address1, address2),
+                    pageable,
+                    2
+            );
+
+            when(authenticationFacade.getCurrentUserId()).thenReturn(1L);
+            when(userRepository.findByIdAndHasDeletedFalse(1L))
+                    .thenReturn(Optional.of(user));
+
+            when(pageablePolicy.normalize(any(), any()))
+                    .thenReturn(pageable);
+
+            when(addressRepository.findAllByUserAndDeletedAtNull(user, pageable))
+                    .thenReturn(page);
+
+            // when
+            AddressGetAllResponseDto response =
+                    addressService.getAll(null, pageable);
+
+            // then
+            assertThat(response.content()).hasSize(2);
+
+            verify(addressRepository)
+                    .findAllByUserAndDeletedAtNull(user, pageable);
+
+            verify(addressRepository, never())
+                    .findByUserAndAddressContainingAndDeletedAtNull(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("주소 목록 조회 성공 - 검색어 있음")
+        void getAll_success_withKeyword() {
+            // given
+            Pageable pageable = PageRequest.of(0, 10);
+
+            UserEntity user = UserEntity.create(
+                    "test",
+                    "encodedPassword",
+                    "테스터",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            Address address = Address.create("서울 강남구", user);
+            ReflectionTestUtils.setField(address, "id", UUID.randomUUID());
+
+            Page<Address> page =
+                    new PageImpl<>(List.of(address), pageable, 1);
+
+            when(authenticationFacade.getCurrentUserId()).thenReturn(1L);
+            when(userRepository.findByIdAndHasDeletedFalse(1L))
+                    .thenReturn(Optional.of(user));
+
+            when(pageablePolicy.normalize(any(), any()))
+                    .thenReturn(pageable);
+
+            when(addressRepository.findByUserAndAddressContainingAndDeletedAtNull(
+                    user,
+                    "강남",
+                    pageable
+            )).thenReturn(page);
+
+            // when
+            AddressGetAllResponseDto response =
+                    addressService.getAll("강남", pageable);
+
+            // then
+            assertThat(response.content()).hasSize(1);
+            assertThat(response.content().get(0).address())
+                    .contains("강남");
+
+            verify(addressRepository)
+                    .findByUserAndAddressContainingAndDeletedAtNull(
+                            user,
+                            "강남",
+                            pageable
+                    );
+        }
+
+        @Test
+        @DisplayName("주소 목록 조회 성공 - 검색어가 공백")
+        void getAll_success_blankKeyword() {
+
+            Pageable pageable = PageRequest.of(0, 10);
+
+            UserEntity user = UserEntity.create(
+                    "test",
+                    "encodedPassword",
+                    "테스터",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            when(authenticationFacade.getCurrentUserId()).thenReturn(1L);
+            when(userRepository.findByIdAndHasDeletedFalse(1L))
+                    .thenReturn(Optional.of(user));
+
+            when(pageablePolicy.normalize(any(), any()))
+                    .thenReturn(pageable);
+
+            when(addressRepository.findAllByUserAndDeletedAtNull(user, pageable))
+                    .thenReturn(Page.empty(pageable));
+
+            // when
+            addressService.getAll("   ", pageable);
+
+            // then
+            verify(addressRepository)
+                    .findAllByUserAndDeletedAtNull(user, pageable);
+
+            verify(addressRepository, never())
+                    .findByUserAndAddressContainingAndDeletedAtNull(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("주소 목록 조회 성공 - 조회 결과 없음")
+        void getAll_success_emptyResult() {
+
+            Pageable pageable = PageRequest.of(0, 10);
+
+            UserEntity user = UserEntity.create(
+                    "test",
+                    "encodedPassword",
+                    "테스터",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            when(authenticationFacade.getCurrentUserId()).thenReturn(1L);
+            when(userRepository.findByIdAndHasDeletedFalse(1L))
+                    .thenReturn(Optional.of(user));
+
+            when(pageablePolicy.normalize(any(), any()))
+                    .thenReturn(pageable);
+
+            when(addressRepository.findAllByUserAndDeletedAtNull(user, pageable))
+                    .thenReturn(Page.empty(pageable));
+
+            // when
+            AddressGetAllResponseDto response =
+                    addressService.getAll(null, pageable);
+
+            // then
+            assertThat(response.content()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("주소 목록 조회 실패 - 사용자가 존재하지 않음")
+        void getAll_fail_userNotFound() {
+
+            Pageable pageable = PageRequest.of(0, 10);
+
+            when(authenticationFacade.getCurrentUserId())
+                    .thenReturn(1L);
+
+            when(userRepository.findByIdAndHasDeletedFalse(1L))
+                    .thenReturn(Optional.empty());
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> addressService.getAll(null, pageable)
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.USER_NOT_FOUND);
+
+            verify(pageablePolicy, never())
+                    .normalize(any(), any());
+
+            verify(addressRepository, never())
+                    .findAllByUserAndDeletedAtNull(any(), any());
         }
     }
 }
