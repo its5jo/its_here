@@ -82,6 +82,11 @@ public class Store extends BaseDeletableEntity {
         return store;
     }
 
+    public void accumulateReview(double rating) {
+        this.reviewTotalRating += rating;
+        this.reviewTotalCount += 1;
+    }
+
     public double calculateAverageRating() {
         if(reviewTotalCount == 0){
             return 0.0;
