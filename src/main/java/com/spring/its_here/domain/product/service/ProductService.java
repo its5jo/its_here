@@ -2,7 +2,9 @@ package com.spring.its_here.domain.product.service;
 
 import com.spring.its_here.domain.product.dto.command.ProductCreateCommand;
 import com.spring.its_here.domain.product.dto.command.ProductUpdateCommand;
+import com.spring.its_here.domain.product.dto.request.ProductSearchCondition;
 import com.spring.its_here.domain.product.dto.response.ProductCreateResponseDto;
+import com.spring.its_here.domain.product.dto.response.ProductCursorResponseDto;
 import com.spring.its_here.domain.product.dto.response.ProductResponseDto;
 import com.spring.its_here.domain.product.dto.response.ProductUpdateResponseDto;
 
@@ -17,5 +19,5 @@ public interface ProductService {
 
     ProductResponseDto getProduct(UUID productId);
 
-    void getStoreProducts(UUID storeId);
+    ProductCursorResponseDto searchStoreProducts(ProductSearchCondition condition, UUID storeId);
 }
