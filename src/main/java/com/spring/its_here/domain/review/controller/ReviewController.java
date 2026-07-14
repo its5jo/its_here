@@ -95,11 +95,15 @@ public class ReviewController implements ReviewApi {
         return ResponseEntity.ok(ApiResponse.success("리뷰 수정 성공", reviewUpdateResponseDto));
     }
 
-    @DeleteMapping()
-    public ResponseEntity<Void> deleteReview(
-            @AuthenticationPrincipal CustomUserDetails userDetails
+    @DeleteMapping("/{reviewId}")
+    public ResponseEntity<ApiResponse<Void>> deleteReview(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("reviewId") UUID reviewId
     ) {
-        reviewService.deleteReveiw(userDetails);
+        reviewService.deleteReview(
+                userDetails,
+                reviewId
+        );
         return ResponseEntity.noContent().build();
     }
 

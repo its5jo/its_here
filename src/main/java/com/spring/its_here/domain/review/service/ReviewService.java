@@ -168,11 +168,33 @@ public class ReviewService {
         return ReviewUpdateResponseDto.from(review.getId());
     }
 
+    @PreAuthorize("hasAuthority('CUSTOMER')")
     @Transactional
-    public Void deleteReveiw(
-            CustomUserDetails userDetails
+    public void deleteReview(
+            CustomUserDetails userDetails,
+            UUID reviewId
     ) {
-        return null;
+        UserEntity user = userDetails.getUserEntity();
+        Review review = findByIdAndDeletedAtIsNull(reviewId);
+
+        validReviewCustomer(
+                user,
+                review
+        );
+
+        double rating = review.getRating();
+        review.delete(user.getId());
+
+        try {
+            reviewRepository.flush();
+        } catch (ObjectOptimisticLockingFailureException e) {
+            throw new ItsHereException(ErrorCode.REVIEW_CONFLICT);
+        }
+
+        storeRepository.deleteReview(
+                review.getStore().getId(),
+                rating
+        );
     }
 
     private Review findByIdAndDeletedAtIsNull(UUID reviewId) {

@@ -641,4 +641,103 @@ class ReviewServiceTest {
             verify(storeRepository, never()).modifyReviewRating(any(), any(), any());
         }
     }
+
+    @Nested
+    @DisplayName("리뷰 삭제")
+    class deleteReview {
+        @Test
+        @DisplayName("리뷰 삭제 성공")
+        void deleteReview_success() {
+            UserEntity user = createTestUser(userId);
+            CustomUserDetails customUserDetails = createUserDetails(user);
+            Store store = createTestStore(user);
+            Order order = createTestOrder(
+                    userId,
+                    OrderStatus.COMPLETED
+            );
+            Review review = Review.savedReview(
+                    3.0,
+                    "기존 내용",
+                    user,
+                    store,
+                    order
+            );
+            ReflectionTestUtils.setField(review, "id", reviewId);
+
+            given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId)).willReturn(Optional.of(review));
+
+            reviewService.deleteReview(
+                    customUserDetails,
+                    reviewId
+            );
+
+            assertThat(review.getDeletedAt()).isNotNull();
+            assertThat(review.getDeletedBy()).isEqualTo(userId);
+
+            verify(customUserDetails).getUserEntity();
+            verify(reviewRepository).findByIdAndDeletedAtIsNull(reviewId);
+            verify(reviewRepository).flush();
+            verify(storeRepository).deleteReview(
+                    storeId,
+                    3.0
+            );
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 리뷰 삭제 시 예외")
+        void deleteReview_not_found() {
+            UserEntity user = createTestUser(userId);
+            CustomUserDetails customUserDetails = createUserDetails(user);
+
+            given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> reviewService.deleteReview(
+                    customUserDetails,
+                    reviewId
+            )).isInstanceOfSatisfying(
+                    ItsHereException.class,
+                    exception -> assertThat(exception.getErrorCode())
+                            .isEqualTo(ErrorCode.REVIEW_NOT_FOUND)
+            );
+
+            verify(reviewRepository).findByIdAndDeletedAtIsNull(reviewId);
+            verify(reviewRepository, never()).flush();
+            verify(storeRepository, never()).deleteReview(any(), any());
+        }
+
+        @Test
+        @DisplayName("본인이 작성한 리뷰가 아니면 예외")
+        void deleteReview_forbidden() {
+            UserEntity loginUser = createTestUser(1L);
+            UserEntity user = createTestUser(2L);
+            CustomUserDetails customUserDetails = createUserDetails(loginUser);
+            Store store = createTestStore(user);
+            Order order = createTestOrder(
+                    user.getId(),
+                    OrderStatus.COMPLETED
+            );
+            Review review = Review.savedReview(
+                    3.0,
+                    "content",
+                    user,
+                    store,
+                    order
+            );
+            ReflectionTestUtils.setField(review, "id", reviewId);
+
+            given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId)).willReturn(Optional.of(review));
+
+            assertThatThrownBy(()-> reviewService.deleteReview(
+                    customUserDetails,
+                    reviewId
+            )).isInstanceOfSatisfying(
+                    ItsHereException.class,
+                    exception -> assertThat(exception.getErrorCode())
+                            .isEqualTo(ErrorCode.AUTH_FORBIDDEN)
+            );
+
+            verify(reviewRepository, never()).flush();
+            verify(storeRepository, never()).deleteReview(any(), any());
+        }
+    }
 }
