@@ -237,13 +237,4 @@ public class ProductServiceImpl implements ProductService {
         return PageRequest.of(0, condition.limit(), sort);
 
     }
-
-    private Product getLastProduct(Slice<Product> productSlice) {
-        if (productSlice.isEmpty()) {
-            return null;
-        }
-
-        return productSlice.getContent()
-                .get(productSlice.getNumberOfElements() - 1);
-    }
 }
