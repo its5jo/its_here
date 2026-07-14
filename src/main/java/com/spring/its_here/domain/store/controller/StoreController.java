@@ -57,17 +57,20 @@ public class StoreController {
 
     @PutMapping("/{storeId}")
     public ResponseEntity<ApiResponse<StoreUpdateResponseDto>> updateStore(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID storeId,
             @Valid @RequestBody StoreUpdateRequestDto requestDto){
-        StoreUpdateResponseDto responseDto = storeService.updateStore(storeId, requestDto);
+        StoreUpdateResponseDto responseDto = storeService.updateStore(userDetails, storeId, requestDto);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success("가게 정보 수정 성공", responseDto));
     }
 
     @DeleteMapping("/{storeId}")
-    public ResponseEntity<Void> deleteStore(@PathVariable UUID storeId){
-        storeService.deleteStore(storeId);
+    public ResponseEntity<Void> deleteStore(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID storeId){
+        storeService.deleteStore(userDetails, storeId);
         return ResponseEntity
                 .noContent()
                 .build();
