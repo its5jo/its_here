@@ -2,9 +2,11 @@ package com.spring.its_here.domain.address.service;
 
 import com.spring.its_here.domain.address.dto.request.AddressCreateRequestDto;
 import com.spring.its_here.domain.address.dto.request.AddressUpdateRequestDto;
+import com.spring.its_here.domain.address.dto.response.AddressGetAllResponseDto;
 import com.spring.its_here.domain.address.dto.response.AddressGetResponseDto;
 import com.spring.its_here.domain.address.dto.response.AddressResponseDto;
 import com.spring.its_here.domain.address.entity.Address;
+import com.spring.its_here.domain.address.pageable.PageablePolicy;
 import com.spring.its_here.domain.address.repository.AddressRepository;
 import com.spring.its_here.domain.user.entity.UserEntity;
 import com.spring.its_here.domain.user.repository.UserRepository;
@@ -12,11 +14,15 @@ import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
 import com.spring.its_here.global.security.AuthenticationFacade;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -26,6 +32,7 @@ public class AddressService {
     private final UserRepository userRepository;
     private final AddressRepository addressRepository;
     private final AuthenticationFacade authenticationFacade;
+    private final PageablePolicy pageablePolicy;
 
     private UserEntity getCurrentUser() {
         // 현재 로그인된 사용자 PK 가져오기
@@ -120,6 +127,49 @@ public class AddressService {
 
     @PreAuthorize("hasAuthority('CUSTOMER')")
     @Transactional(readOnly = true)
+    public AddressGetAllResponseDto getAll(String address, Pageable pageable) {
+        // 현재 인증된 사용자 조회
+        UserEntity currentUser = getCurrentUser();
+
+        // Pageable 검증
+        Pageable validatedPageable
+                = pageablePolicy.normalize(
+                        pageable,
+                        Set.of(
+                                "createdAt",
+                                "updatedAt"
+                        )
+        );
+
+        // 띄어쓰기 검증
+        String keyword =
+                address == null
+                        ? null
+                        : address.trim();
+
+        // 주소 검색 여부에 따라 조회
+        Page<Address> addressPage = (keyword == null || keyword.isBlank())
+                ? addressRepository.findAllByUserAndDeletedAtNull(currentUser, validatedPageable)
+                : addressRepository.findByUserAndAddressContainingAndDeletedAtNull(
+                currentUser,
+                address,
+                validatedPageable
+        );
+
+        List<AddressGetResponseDto> content = addressPage.getContent()
+                .stream()
+                .map(addressEntity
+                        -> AddressGetResponseDto.from(
+                                addressEntity.getId(),
+                                addressEntity.getAddress())
+                )
+                .toList();
+
+        return AddressGetAllResponseDto.from(content, addressPage);
+    }
+
+    @PreAuthorize("hasAuthority('CUSTOMER')")
+    @Transactional(readOnly = true)
     public AddressGetResponseDto get(UUID addressId) {
         // 현재 인증된 사용자 반환
         UserEntity currentUser = getCurrentUser();
@@ -137,11 +187,5 @@ public class AddressService {
                 address.getId(),
                 address.getAddress()
         );
-    }
-
-    @PreAuthorize("hasAuthority('CUSTOMER')")
-    @Transactional(readOnly = true)
-    public Void getAll() {
-        return null;
     }
 }
