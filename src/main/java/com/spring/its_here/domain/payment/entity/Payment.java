@@ -51,4 +51,8 @@ public class Payment extends BaseEntity {
         return payment;
     }
 
+    public void cancel() {
+        this.status = PaymentStatus.CANCELED;
+    }
+
 }
