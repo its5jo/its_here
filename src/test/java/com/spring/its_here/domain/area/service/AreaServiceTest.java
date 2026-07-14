@@ -276,6 +276,18 @@ class AreaServiceTest {
                     areaId
             );
         }
+
+        @Test
+        @DisplayName("중복지역으로 수정하면 예외")
+        void updateArea_duplicate(){
+
+        }
+        
+        @Test
+        @DisplayName("존재하지 않는 지역이면 예외")
+        void updateArea_not_found(){
+            
+        }
     }
 
     @Nested
