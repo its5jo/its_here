@@ -10,7 +10,6 @@ import com.spring.its_here.domain.area.repository.AreaRepository;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
 import com.spring.its_here.global.response.OffsetPageInfo;
-import com.spring.its_here.global.security.AuthenticationFacade;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,20 +24,17 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AreaService {
     private final AreaRepository areaRepository;
-    private final AuthenticationFacade authenticationFacade;
 
     @Transactional
     @PreAuthorize("hasAnyAuthority('MANAGER','MASTER')")
-    public AreaCreateResponseDto createArea(AreaCreateRequestDto areaCreateRequestDto) {
-        if (areaRepository.existsByCityAndDistrictAndTown(
+    public AreaCreateResponseDto createArea(
+            AreaCreateRequestDto areaCreateRequestDto
+    ) {
+        validateDuplicateAreaForCreate(
                 areaCreateRequestDto.city(),
                 areaCreateRequestDto.district(),
                 areaCreateRequestDto.town()
-        )) {
-            throw new ItsHereException(ErrorCode.AREA_ALREADY_EXISTS);
-        }
-
-        Long userId = authenticationFacade.getCurrentUserId();
+        );
 
         Area area = Area.create(
                 areaCreateRequestDto.city(),
@@ -58,8 +54,7 @@ public class AreaService {
     public AreaGetOneResponseDto getOneArea(
             UUID areaId
     ) {
-        Area area = areaRepository.findByIdAndDeletedAtIsNull(areaId)
-                .orElseThrow(() -> new ItsHereException(ErrorCode.AREA_NOT_FOUND));
+        Area area = findByIdAndDeletedAtIsNull(areaId);
 
         return new AreaGetOneResponseDto(
                 area.getId(),
@@ -101,16 +96,78 @@ public class AreaService {
         );
     }
 
+    @PreAuthorize("hasAnyAuthority('MANAGER','MASTER')")
     @Transactional
     public AreaUpdateResponseDto updateArea(
             AreaUpdateRequestDto areaUpdateRequestDto,
             UUID areaId
     ) {
-        return null;
+        Area area = findByIdAndDeletedAtIsNull(areaId);
+        validateDuplicateAreaForUpdate(
+                areaUpdateRequestDto.city(),
+                areaUpdateRequestDto.district(),
+                areaUpdateRequestDto.town(),
+                areaId
+        );
+
+        area.updatedArea(
+                areaUpdateRequestDto.city(),
+                areaUpdateRequestDto.district(),
+                areaUpdateRequestDto.town(),
+                areaUpdateRequestDto.hasAvailable()
+        );
+
+        return new AreaUpdateResponseDto(area.getId());
     }
 
+    @PreAuthorize("hasAnyAuthority('MANAGER','MASTER')")
     @Transactional
-    public void deleteArea(UUID areaId) {
+    public void deleteArea(
+            Long userId,
+            UUID areaId
+    ) {
+        Area area = areaRepository.findById(areaId)
+                .orElseThrow(() -> new ItsHereException(ErrorCode.AREA_NOT_FOUND));
 
+        if (area.isDeleted()) {
+            throw new ItsHereException(ErrorCode.AREA_ALREADY_DELETED);
+        }
+
+        area.delete(userId);
+    }
+
+    private Area findByIdAndDeletedAtIsNull(UUID areaId) {
+        return areaRepository.findByIdAndDeletedAtIsNull(areaId)
+                .orElseThrow(() -> new ItsHereException(ErrorCode.AREA_NOT_FOUND));
+    }
+
+    private void validateDuplicateAreaForCreate(
+            String city,
+            String district,
+            String town
+    ) {
+        if (areaRepository.existsByCityAndDistrictAndTown(
+                city,
+                district,
+                town
+        )) {
+            throw new ItsHereException(ErrorCode.AREA_ALREADY_EXISTS);
+        }
+    }
+
+    private void validateDuplicateAreaForUpdate(
+            String city,
+            String district,
+            String town,
+            UUID areaId
+    ) {
+        if (areaRepository.existsByCityAndDistrictAndTownAndIdNot(
+                city,
+                district,
+                town,
+                areaId
+        )) {
+            throw new ItsHereException(ErrorCode.AREA_ALREADY_EXISTS);
+        }
     }
 }

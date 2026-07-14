@@ -2,14 +2,15 @@ package com.spring.its_here.domain.area.service;
 
 import com.spring.its_here.domain.area.dto.request.AreaCreateRequestDto;
 import com.spring.its_here.domain.area.dto.request.AreaGetAllRequestDto;
+import com.spring.its_here.domain.area.dto.request.AreaUpdateRequestDto;
 import com.spring.its_here.domain.area.dto.response.AreaCreateResponseDto;
 import com.spring.its_here.domain.area.dto.response.AreaGetAllResponseDto;
 import com.spring.its_here.domain.area.dto.response.AreaGetOneResponseDto;
+import com.spring.its_here.domain.area.dto.response.AreaUpdateResponseDto;
 import com.spring.its_here.domain.area.entity.Area;
 import com.spring.its_here.domain.area.repository.AreaRepository;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
-import com.spring.its_here.global.security.AuthenticationFacade;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -37,15 +39,12 @@ class AreaServiceTest {
     @Mock
     AreaRepository areaRepository;
 
-    @Mock
-    AuthenticationFacade authenticationFacade;
-
     @InjectMocks
     AreaService areaService;
 
     UUID areaId = UUID.randomUUID();
 
-    private Area createArea(
+    private Area createTestArea(
             UUID id,
             String city,
             String district,
@@ -62,7 +61,7 @@ class AreaServiceTest {
 
     @Nested
     @DisplayName("지역 생성")
-    class create {
+    class createArea {
         @Test
         @DisplayName("성공")
         void createArea_success() {
@@ -71,7 +70,7 @@ class AreaServiceTest {
                     "district",
                     "town"
             );
-            Area areaSave = createArea(
+            Area areaSave = createTestArea(
                     areaId,
                     "city",
                     "district",
@@ -81,7 +80,6 @@ class AreaServiceTest {
 
             ReflectionTestUtils.setField(areaSave, "id", areaId);
 
-            given(authenticationFacade.getCurrentUserId()).willReturn(1L);
             given(areaRepository.save(any(Area.class))).willReturn(areaSave);
 
             AreaCreateResponseDto areaCreateResponseDto = areaService.createArea(areaCreateRequestDto);
@@ -89,7 +87,6 @@ class AreaServiceTest {
             assertThat(areaCreateResponseDto).isNotNull();
             assertThat(areaCreateResponseDto.areaId()).isEqualTo(areaId);
 
-            verify(authenticationFacade).getCurrentUserId();
             verify(areaRepository).save(any(Area.class));
         }
 
@@ -120,17 +117,16 @@ class AreaServiceTest {
                     areaCreateRequestDto.town()
             );
             verify(areaRepository, never()).save(any(Area.class));
-            verify(authenticationFacade, never()).getCurrentUserId();
         }
     }
 
     @Nested
     @DisplayName("지역 조회")
-    class get {
+    class getArea {
         @Test
         @DisplayName("단건조회 성공")
         void getOneArea_success() {
-            Area area = createArea(
+            Area area = createTestArea(
                     areaId,
                     "city",
                     "district",
@@ -171,14 +167,14 @@ class AreaServiceTest {
             UUID firstAreaId = UUID.randomUUID();
             UUID secondAreaId = UUID.randomUUID();
 
-            Area firstArea = createArea(
+            Area firstArea = createTestArea(
                     firstAreaId,
                     "city",
                     "district1",
                     "town",
                     Instant.parse("2026-07-12T06:00:00Z")
             );
-            Area secondArea = createArea(
+            Area secondArea = createTestArea(
                     secondAreaId,
                     "city",
                     "district2",
@@ -231,6 +227,113 @@ class AreaServiceTest {
                     areaGetAllRequestDto.hasAvailable(),
                     pageable
             );
+        }
+    }
+
+    @Nested
+    @DisplayName("지역 수정")
+    class updateArea {
+        @Test
+        @DisplayName("지역수정 성공")
+        void updateArea_success() {
+            Area area = createTestArea(
+                    areaId,
+                    "city",
+                    "district",
+                    "tonw",
+                    Instant.parse("2026-07-15T01:50:00Z")
+            );
+            AreaUpdateRequestDto areaUpdateRequestDto = new AreaUpdateRequestDto(
+                    "city",
+                    "district",
+                    "town",
+                    true
+            );
+            given(areaRepository.findByIdAndDeletedAtIsNull(areaId)).willReturn(Optional.of(area));
+            given(areaRepository.existsByCityAndDistrictAndTownAndIdNot(
+                    areaUpdateRequestDto.city(),
+                    areaUpdateRequestDto.district(),
+                    areaUpdateRequestDto.town(),
+                    areaId
+            )).willReturn(false);
+
+            AreaUpdateResponseDto areaUpdateResponseDto = areaService.updateArea(
+                    areaUpdateRequestDto,
+                    areaId
+            );
+            assertThat(areaUpdateResponseDto.areaId()).isEqualTo(areaId);
+            assertThat(area.getCity()).isEqualTo("city");
+            assertThat(area.getDistrict()).isEqualTo("district");
+            assertThat(area.getTown()).isEqualTo("town");
+            assertThat(area.isHasAvailable()).isTrue();
+
+            verify(areaRepository).findByIdAndDeletedAtIsNull(areaId);
+
+            verify(areaRepository).existsByCityAndDistrictAndTownAndIdNot(
+                    areaUpdateRequestDto.city(),
+                    areaUpdateRequestDto.district(),
+                    areaUpdateRequestDto.town(),
+                    areaId
+            );
+        }
+    }
+
+    @Nested
+    @DisplayName("지역 삭제")
+    class deleteArea {
+        Long userId = 1L;
+
+        @Test
+        @DisplayName("지역삭제 성공")
+        void deleteReview_success() {
+            Area area = createTestArea(
+                    areaId,
+                    "city",
+                    "district",
+                    "town",
+                    Instant.parse("2026-07-15T01:34:59Z")
+            );
+
+            given(areaRepository.findById(areaId)).willReturn(Optional.of(area));
+            areaService.deleteArea(userId, areaId);
+
+            assertThat(area.getDeletedAt()).isNotNull();
+            assertThat(area.getDeletedAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("지역삭제 존재하지 않는 지역 삭제 시 예외")
+        void deleteArea_not_found() {
+            given(areaRepository.findById(areaId)).willReturn(Optional.empty());
+
+            assertThatThrownBy(
+                    () -> areaService.deleteArea(
+                            userId,
+                            areaId
+                    )).isInstanceOf(ItsHereException.class)
+                    .hasMessage(ErrorCode.AREA_NOT_FOUND.getMessage());
+        }
+
+        @Test
+        @DisplayName("지역삭제 이미 삭제된 지역 삭제 시 예외")
+        void deleteArea_already_deleted() {
+            Area area = createTestArea(
+                    areaId,
+                    "city",
+                    "district",
+                    "town",
+                    Instant.parse("2026-07-15T01:42:00Z")
+            );
+            area.delete(2L);
+
+            given(areaRepository.findById(areaId)).willReturn(Optional.of(area));
+
+            assertThatThrownBy(
+                    () -> areaService.deleteArea(
+                            userId,
+                            areaId
+                    )).isInstanceOf(ItsHereException.class)
+                    .hasMessage(ErrorCode.AREA_ALREADY_DELETED.getMessage());
         }
     }
 }
