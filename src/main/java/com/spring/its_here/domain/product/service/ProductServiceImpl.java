@@ -2,9 +2,8 @@ package com.spring.its_here.domain.product.service;
 
 import com.spring.its_here.domain.product.dto.command.ProductCreateCommand;
 import com.spring.its_here.domain.product.dto.command.ProductUpdateCommand;
-import com.spring.its_here.domain.product.dto.response.ProductCreateResponseDto;
-import com.spring.its_here.domain.product.dto.response.ProductResponseDto;
-import com.spring.its_here.domain.product.dto.response.ProductUpdateResponseDto;
+import com.spring.its_here.domain.product.dto.request.ProductSearchCondition;
+import com.spring.its_here.domain.product.dto.response.*;
 import com.spring.its_here.domain.product.entity.Product;
 import com.spring.its_here.domain.product.repository.ProductRepository;
 import com.spring.its_here.domain.store.entity.Store;
@@ -17,9 +16,14 @@ import com.spring.its_here.global.advice.ItsHereException;
 import com.spring.its_here.infrastructure.storage.ImageStorage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -155,7 +159,82 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public void getStoreProducts(UUID storeId) {
+    @Transactional(readOnly = true)
+    public ProductCursorResponseDto searchStoreProducts(
+            ProductSearchCondition condition,
+            UUID storeId
+    ) {
+        log.debug(
+                "가게 상품 목록 조회 요청. storeId={}, cursor={}, idAfter={}, sortBy={}, sortDirection={}, limit={}",
+                storeId,
+                condition.cursor(),
+                condition.idAfter(),
+                condition.sortBy(),
+                condition.sortDirection(),
+                condition.limit()
+        );
+
+        storeRepository.findById(storeId)
+                .orElseThrow(() -> {
+                    log.warn("상품 목록 조회 실패 - 가게를 찾을 수 없음. storeId={}", storeId);
+                    return new ItsHereException(ErrorCode.STORE_NOT_FOUND);
+                });
+
+        Pageable pageable = createPageable(condition);
+
+        Slice<Product> productSlice = productRepository.searchProductsByCursor(
+                storeId,
+                condition.cursor(),
+                condition.idAfter(),
+                condition.sortDirection().name(),
+                pageable
+        );
+
+        List<Product> products = productSlice.getContent();
+
+        List<ProductResponseDto> content = products.stream()
+                .map(ProductResponseDto::from)
+                .toList();
+
+        String nextCursor = null;
+        UUID nextId = null;
+
+        if (productSlice.hasNext()) {
+            Product lastProduct = products.get(products.size() - 1);
+            nextCursor = lastProduct.getCreatedAt().toString();
+            nextId = lastProduct.getId();
+        }
+
+        log.info(
+                "가게 상품 목록 조회 완료. storeId={}, resultCount={}, hasNext={}, nextCursor={}, nextId={}",
+                storeId,
+                content.size(),
+                productSlice.hasNext(),
+                nextCursor,
+                nextId
+        );
+
+        return new ProductCursorResponseDto(
+                content,
+                new ProductCursorPageInfo(
+                        "CURSOR",
+                        nextCursor,
+                        nextId,
+                        productSlice.hasNext(),
+                        condition.sortBy().getValue(),
+                        condition.sortDirection()
+                )
+        );
+    }
+
+    private Pageable createPageable(ProductSearchCondition condition) {
+        Sort.Direction direction =
+                condition.sortDirection().toSpringDirection();
+
+        Sort sort = Sort.by(direction, condition.sortBy().getValue())
+                .and(Sort.by(direction, "id"));
+
+        return PageRequest.of(0, condition.limit(), sort);
 
     }
 }
