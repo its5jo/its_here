@@ -74,7 +74,7 @@ class OrderServiceTest {
 
         store = mock(Store.class);
 
-        product = Product.create("테스트상품", "설명", false, 10000, null);
+        product = Product.create("테스트상품", "설명", false, 10000, null, store);
         ReflectionTestUtils.setField(product, "id", PRODUCT_ID);
 
         requestDto = new OrderCreateRequestDto(
