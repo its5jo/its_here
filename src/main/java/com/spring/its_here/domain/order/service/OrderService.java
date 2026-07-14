@@ -2,14 +2,17 @@ package com.spring.its_here.domain.order.service;
 
 import com.spring.its_here.domain.order.dto.request.OrderCreateRequestDto;
 import com.spring.its_here.domain.order.dto.request.OrderProductRequestDto;
+import com.spring.its_here.domain.order.dto.response.OrderCancelResponseDto;
 import com.spring.its_here.domain.order.dto.response.OrderListResponseDto;
 import com.spring.its_here.domain.order.dto.response.OrderResponseDto;
+import com.spring.its_here.domain.order.dto.response.OrderStatusResponseDto;
 import com.spring.its_here.domain.order.entity.Order;
 import com.spring.its_here.domain.order.entity.OrderProduct;
 import com.spring.its_here.domain.order.enums.OrderStatus;
 import com.spring.its_here.domain.order.repository.OrderProductRepository;
 import com.spring.its_here.domain.order.repository.OrderRepository;
 import com.spring.its_here.domain.payment.dto.response.PaymentResponseDto;
+import com.spring.its_here.domain.payment.entity.Payment;
 import com.spring.its_here.domain.payment.service.PaymentService;
 import com.spring.its_here.domain.product.entity.Product;
 import com.spring.its_here.domain.product.repository.ProductRepository;
@@ -125,6 +128,30 @@ public class OrderService {
         return OrderListResponseDto.from(orders);
     }
 
+    public OrderCancelResponseDto cancelOrder(UUID orderId, Long userId, UserRole role) {
+        // 주문 검증
+        Order order = orderRepository.findByIdAndDeletedAtIsNull(orderId)
+                .orElseThrow(() -> new ItsHereException(ErrorCode.ORDER_NOT_FOUND));
+
+        // 본인의 주문인지 확인(CUSTOMER,OWNER)
+        if ((role == UserRole.CUSTOMER || role == UserRole.OWNER)
+            && !order.getUserId().equals(userId)) {
+            throw new ItsHereException(ErrorCode.ORDER_ACCESS_FORBIDDEN);
+        }
+
+        // 5분 이내의 주문인지 확인
+        if (!order.isCancelable()) {
+            throw new ItsHereException(ErrorCode.ORDER_CANCEL_TIMEOUT);
+        }
+
+        order.cancel();
+        Payment payment = paymentService.cancelPayment(orderId);
+        return OrderCancelResponseDto.from(order, payment);
+    }
+
+    public OrderStatusResponseDto updateStatus(UUID orderId, Long userId, UserRole role) {
+        
+    }
 
 
     // ===== 보조 메서드 =====
@@ -159,6 +186,4 @@ public class OrderService {
                 .mapToInt(item -> productMap.get(item.productId()).getPrice() * item.quantity())
                 .sum();
     }
-
-
 }
