@@ -4,10 +4,7 @@ package com.spring.its_here.domain.review.controller;
 import com.spring.its_here.domain.review.dto.request.ReviewCreateRequestDto;
 import com.spring.its_here.domain.review.dto.request.ReviewGetAllRequestDto;
 import com.spring.its_here.domain.review.dto.request.ReviewUpdateRequestDto;
-import com.spring.its_here.domain.review.dto.response.ReviewCreateResponseDto;
-import com.spring.its_here.domain.review.dto.response.ReviewGetAllResponseDto;
-import com.spring.its_here.domain.review.dto.response.ReviewGetOneResponseDto;
-import com.spring.its_here.domain.review.dto.response.ReviewUpdateResponseDto;
+import com.spring.its_here.domain.review.dto.response.*;
 import com.spring.its_here.domain.review.service.ReviewService;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
@@ -96,6 +93,14 @@ public class ReviewController implements ReviewApi {
         );
 
         return ResponseEntity.ok(ApiResponse.success("리뷰 수정 성공", reviewUpdateResponseDto));
+    }
+
+    @DeleteMapping()
+    public ResponseEntity<Void> deleteReview(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        reviewService.deleteReveiw(userDetails);
+        return ResponseEntity.noContent().build();
     }
 
     private Pageable normalizeSize(Pageable pageable) {

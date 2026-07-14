@@ -168,6 +168,13 @@ public class ReviewService {
         return ReviewUpdateResponseDto.from(review.getId());
     }
 
+    @Transactional
+    public Void deleteReveiw(
+            CustomUserDetails userDetails
+    ) {
+        return null;
+    }
+
     private Review findByIdAndDeletedAtIsNull(UUID reviewId) {
         return reviewRepository.findByIdAndDeletedAtIsNull(reviewId)
                 .orElseThrow(() -> new ItsHereException(ErrorCode.REVIEW_NOT_FOUND));
