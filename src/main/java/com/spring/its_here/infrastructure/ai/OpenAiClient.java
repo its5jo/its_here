@@ -12,6 +12,7 @@ public class OpenAiClient implements AiClient {
     @Override
     public String generateDescription(String prompt) {
         log.debug("OpenAI API 호출 시작");
+        // TODO: ai 사용 로직 추가
         log.debug("OpenAI API 호출 완료");
         return "";
     }
