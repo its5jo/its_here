@@ -36,6 +36,11 @@ public enum ErrorCode {
     // order
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 주문입니다.", "O-001"),
     ORDER_ACCESS_FORBIDDEN(HttpStatus.FORBIDDEN, "해당 주문 내역에 대한 접근 권한이 없습니다.", "O-002"),
+    ORDER_CANCEL_TIMEOUT(HttpStatus.BAD_REQUEST," 취소 가능한 주문 상태가 아닙니다.", "O-003"),
+    ORDER_STATUS_TRANSITION_INVALID(HttpStatus.BAD_REQUEST, "유효하지 않은 주문 상태 변경입니다.", "O-004"),
+
+    // payment
+    PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 결제입니다.", "PM-001"),
 
     // store
     STORE_NOT_FOUND(HttpStatus.NOT_FOUND, "가게가 존재하지 않습니다.", "S-001"),

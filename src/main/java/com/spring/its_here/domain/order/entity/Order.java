@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -56,5 +57,21 @@ public class Order extends BaseDeletableEntity {
                                String deliveryAddress, String requestMemo,
                                int totalAmount) {
         return new Order(storeId, userId, deliveryAddress, requestMemo, totalAmount);
+    }
+
+    public void cancel() {
+        this.status = OrderStatus.CANCELED;
+    }
+
+    public boolean isCancelable() {
+        // REQUESTED 상태이고 5분 이내여야 취소 가능
+        if (this.status != OrderStatus.REQUESTED) {
+            return false;
+        }
+        return Duration.between(this.getCreatedAt(), Instant.now()).toMinutes() < 5;
+    }
+
+    public void updateStatus(OrderStatus status) {
+        this.status = status;
     }
 }

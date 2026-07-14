@@ -1,8 +1,11 @@
 package com.spring.its_here.domain.order.controller;
 
 import com.spring.its_here.domain.order.dto.request.OrderCreateRequestDto;
+import com.spring.its_here.domain.order.dto.request.OrderStatusUpdateRequestDto;
+import com.spring.its_here.domain.order.dto.response.OrderCancelResponseDto;
 import com.spring.its_here.domain.order.dto.response.OrderListResponseDto;
 import com.spring.its_here.domain.order.dto.response.OrderResponseDto;
+import com.spring.its_here.domain.order.dto.response.OrderStatusResponseDto;
 import com.spring.its_here.domain.order.enums.OrderStatus;
 import com.spring.its_here.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
@@ -61,5 +64,36 @@ public interface OrderApi {
             @Parameter(description = "페이지 크기 (10, 30, 50만 허용)") int size,
             @Parameter(description = "주문 상태 필터 (선택)") OrderStatus orderStatus,
             @Parameter(hidden = true) CustomUserDetails userDetails
+    );
+
+    @Operation(
+            summary = "주문 취소",
+            description = "주문 생성 후 5분 이내이면서 REQUESTED 상태인 주문만 취소 가능합니다."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "주문 취소 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "취소 가능 시간 초과 또는 취소 불가 상태"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "본인의 주문이 아님"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "주문 없음")
+    })
+    ResponseEntity<ApiResponse<OrderCancelResponseDto>> cancelOrder(
+            @Parameter(hidden = true) CustomUserDetails userDetails,
+            @Parameter(description = "주문 ID") UUID orderId
+    );
+
+    @Operation(
+            summary = "주문 상태 변경",
+            description = "OWNER는 본인 가게 주문만, MANAGER/MASTER는 전체 변경 가능합니다."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "주문 상태 변경 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "유효하지 않은 상태 전이"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 없음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "주문 없음")
+    })
+    ResponseEntity<ApiResponse<OrderStatusResponseDto>> updateOrderStatus(
+            @Parameter(hidden = true) CustomUserDetails userDetails,
+            @Parameter(description = "주문 ID") UUID orderId,
+            @Parameter(description = "변경할 주문 상태") OrderStatusUpdateRequestDto requestDto
     );
 }
