@@ -50,8 +50,8 @@ AI를 활용한 상품 설명 생성을 지원하는 주문 서비스입니다.
 
 | 팀원 | 담당 도메인                        | 
 | :--: | :-----------------------------: | 
-| 김태언 | AI, Product                   |
 | 김경민 | Auth, User, Address           | 
+| 김태언 | AI, Product                   |
 | 문은서 | Order, Payment, Order Product | 
 | 정나영 | Store, Category, CI/CD               | 
 | 최한솔 | Review, Area                  | 
