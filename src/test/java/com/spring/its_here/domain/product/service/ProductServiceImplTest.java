@@ -2,10 +2,14 @@ package com.spring.its_here.domain.product.service;
 
 import com.spring.its_here.domain.product.dto.command.ProductCreateCommand;
 import com.spring.its_here.domain.product.dto.command.ProductUpdateCommand;
+import com.spring.its_here.domain.product.dto.request.ProductSearchCondition;
 import com.spring.its_here.domain.product.dto.response.ProductCreateResponseDto;
+import com.spring.its_here.domain.product.dto.response.ProductCursorResponseDto;
 import com.spring.its_here.domain.product.dto.response.ProductResponseDto;
 import com.spring.its_here.domain.product.dto.response.ProductUpdateResponseDto;
 import com.spring.its_here.domain.product.entity.Product;
+import com.spring.its_here.domain.product.enums.ProductSortCriteria;
+import com.spring.its_here.domain.product.enums.ProductSortDirection;
 import com.spring.its_here.domain.product.repository.ProductRepository;
 import com.spring.its_here.domain.store.entity.Store;
 import com.spring.its_here.domain.store.repository.StoreRepository;
@@ -23,7 +27,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -550,4 +558,186 @@ class ProductServiceImplTest {
             );
         }
     }
+
+    @Nested
+    @DisplayName("가게 상품 목록 조회")
+    class SearchStoreProductsTest {
+
+        @Test
+        @DisplayName("가게의 상품 목록을 커서 기반으로 조회할 수 있다")
+        void searchStoreProducts_success() {
+            // given
+            UUID storeId = UUID.randomUUID();
+            UUID productId = UUID.randomUUID();
+            Instant createdAt = Instant.parse("2026-07-14T10:00:00Z");
+
+            Store store = mock(Store.class);
+            Product product = mock(Product.class);
+
+            @SuppressWarnings("unchecked")
+            Slice<Product> productSlice = mock(Slice.class);
+
+            ProductSearchCondition condition = new ProductSearchCondition(
+                    ProductSortCriteria.CREATED_AT,
+                    ProductSortDirection.DESCENDING,
+                    null,
+                    null,
+                    10
+            );
+
+            when(storeRepository.findById(storeId))
+                    .thenReturn(Optional.of(store));
+
+            when(productRepository.searchProductsByCursor(
+                    eq(storeId),
+                    isNull(),
+                    isNull(),
+                    eq("DESCENDING"),
+                    any(Pageable.class)
+            )).thenReturn(productSlice);
+
+            when(productSlice.getContent())
+                    .thenReturn(List.of(product));
+            when(productSlice.hasNext())
+                    .thenReturn(true);
+
+            when(product.getId()).thenReturn(productId);
+            when(product.getCreatedAt()).thenReturn(createdAt);
+            when(product.getName()).thenReturn("아메리카노");
+            when(product.getDescription()).thenReturn("고소한 커피");
+            when(product.isHasHidden()).thenReturn(false);
+            when(product.getPrice()).thenReturn(4_000);
+            when(product.getImageUrl()).thenReturn("/images/americano.jpg");
+
+            // when
+            ProductCursorResponseDto response =
+                    productService.searchStoreProducts(condition, storeId);
+
+            // then
+            assertThat(response.content()).hasSize(1);
+
+            assertThat(response.content().get(0).name())
+                    .isEqualTo("아메리카노");
+            assertThat(response.content().get(0).description())
+                    .isEqualTo("고소한 커피");
+            assertThat(response.content().get(0).hasHidden())
+                    .isFalse();
+            assertThat(response.content().get(0).price())
+                    .isEqualTo(4_000);
+            assertThat(response.content().get(0).imageUrl())
+                    .isEqualTo("/images/americano.jpg");
+
+            assertThat(response.pageInfo().paginationType())
+                    .isEqualTo("CURSOR");
+            assertThat(response.pageInfo().hasNext())
+                    .isTrue();
+            assertThat(response.pageInfo().nextCursor())
+                    .isEqualTo(createdAt.toString());
+            assertThat(response.pageInfo().nextIdAfter())
+                    .isEqualTo(productId);
+            assertThat(response.pageInfo().sortBy())
+                    .isEqualTo("createdAt");
+            assertThat(response.pageInfo().sortDirection())
+                    .isEqualTo(ProductSortDirection.DESCENDING);
+
+            verify(storeRepository).findById(storeId);
+
+            verify(productRepository).searchProductsByCursor(
+                    eq(storeId),
+                    isNull(),
+                    isNull(),
+                    eq("DESCENDING"),
+                    any(Pageable.class)
+            );
+        }
+
+        @Test
+        @DisplayName("다음 상품이 없으면 다음 커서 정보를 반환하지 않는다")
+        void searchStoreProducts_success_noNextPage() {
+            // given
+            UUID storeId = UUID.randomUUID();
+
+            Store store = mock(Store.class);
+            Product product = mock(Product.class);
+
+            @SuppressWarnings("unchecked")
+            Slice<Product> productSlice = mock(Slice.class);
+
+            ProductSearchCondition condition = new ProductSearchCondition(
+                    ProductSortCriteria.CREATED_AT,
+                    ProductSortDirection.DESCENDING,
+                    null,
+                    null,
+                    10
+            );
+
+            when(storeRepository.findById(storeId))
+                    .thenReturn(Optional.of(store));
+
+            when(productRepository.searchProductsByCursor(
+                    eq(storeId),
+                    isNull(),
+                    isNull(),
+                    eq("DESCENDING"),
+                    any(Pageable.class)
+            )).thenReturn(productSlice);
+
+            when(productSlice.getContent())
+                    .thenReturn(List.of(product));
+            when(productSlice.hasNext())
+                    .thenReturn(false);
+
+            when(product.getName()).thenReturn("아메리카노");
+            when(product.getDescription()).thenReturn("고소한 커피");
+            when(product.getPrice()).thenReturn(4_000);
+
+            // when
+            ProductCursorResponseDto response =
+                    productService.searchStoreProducts(condition, storeId);
+
+            // then
+            assertThat(response.content()).hasSize(1);
+            assertThat(response.pageInfo().hasNext()).isFalse();
+            assertThat(response.pageInfo().nextCursor()).isNull();
+            assertThat(response.pageInfo().nextIdAfter()).isNull();
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 가게의 상품 목록을 조회하면 예외가 발생한다")
+        void searchStoreProducts_fail_storeNotFound() {
+            // given
+            UUID storeId = UUID.randomUUID();
+
+            ProductSearchCondition condition = new ProductSearchCondition(
+                    ProductSortCriteria.CREATED_AT,
+                    ProductSortDirection.DESCENDING,
+                    null,
+                    null,
+                    10
+            );
+
+            when(storeRepository.findById(storeId))
+                    .thenReturn(Optional.empty());
+
+            // when & then
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> productService.searchStoreProducts(condition, storeId)
+            );
+
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.STORE_NOT_FOUND);
+
+            verify(storeRepository).findById(storeId);
+
+            verify(productRepository, never()).searchProductsByCursor(
+                    any(),
+                    any(),
+                    any(),
+                    anyString(),
+                    any(Pageable.class)
+            );
+        }
+    }
+
 }
