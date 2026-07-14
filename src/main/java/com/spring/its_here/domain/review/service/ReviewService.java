@@ -5,7 +5,11 @@ import com.spring.its_here.domain.order.entity.Order;
 import com.spring.its_here.domain.order.enums.OrderStatus;
 import com.spring.its_here.domain.order.repository.OrderRepository;
 import com.spring.its_here.domain.review.dto.request.ReviewCreateRequestDto;
+import com.spring.its_here.domain.review.dto.request.ReviewGetAllRequestDto;
 import com.spring.its_here.domain.review.dto.response.ReviewCreateResponseDto;
+import com.spring.its_here.domain.review.dto.response.ReviewGetAllItemsResponseDto;
+import com.spring.its_here.domain.review.dto.response.ReviewGetAllResponseDto;
+import com.spring.its_here.domain.review.dto.response.ReviewGetOneResponseDto;
 import com.spring.its_here.domain.review.entity.Review;
 import com.spring.its_here.domain.review.repository.ReviewRepository;
 import com.spring.its_here.domain.store.entity.Store;
@@ -13,11 +17,17 @@ import com.spring.its_here.domain.store.repository.StoreRepository;
 import com.spring.its_here.domain.user.entity.UserEntity;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
+import com.spring.its_here.global.response.OffsetPageInfo;
 import com.spring.its_here.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -61,13 +71,58 @@ public class ReviewService {
         );
 
         Review reviewSave = reviewRepository.save(reviewCreate);
-        //store.accumulateReview(reviewCreateRequestDto.rating());
+        store.accumulateReview(reviewCreateRequestDto.rating());
 
         return new ReviewCreateResponseDto(
                 reviewSave.getId(),
                 reviewSave.getOrder().getId(),
                 reviewSave.getStore().getId(),
                 reviewSave.getUser().getId()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public ReviewGetOneResponseDto getOneReview(UUID reviewId) {
+        Review review = reviewRepository.findByIdAndDeletedAtIsNull(reviewId)
+                .orElseThrow(() -> new ItsHereException(ErrorCode.REVIEW_NOT_FOUND));
+
+        return new ReviewGetOneResponseDto(
+                review.getId(),
+                review.getOrder().getId(),
+                review.getStore().getId(),
+                review.getUser().getId(),
+                review.getRating(),
+                review.getContent(),
+                review.getCreatedAt(),
+                review.getUpdatedAt()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public ReviewGetAllResponseDto getAllReview(
+            ReviewGetAllRequestDto reviewGetAllRequestDto,
+            Pageable pageable
+    ) {
+        Page<Review> reviewPage = reviewRepository.searchReviews(
+                reviewGetAllRequestDto.storeId(),
+                reviewGetAllRequestDto.rating(),
+                pageable
+        );
+
+        List<ReviewGetAllItemsResponseDto> content = reviewPage.getContent()
+                .stream()
+                .map(review -> new ReviewGetAllItemsResponseDto(
+                        review.getId(),
+                        review.getUser().getId(),
+                        review.getRating(),
+                        review.getContent(),
+                        review.getCreatedAt()
+                )).toList();
+        OffsetPageInfo pageInfo = OffsetPageInfo.from(reviewPage);
+
+        return new ReviewGetAllResponseDto(
+                content,
+                pageInfo
         );
     }
 }

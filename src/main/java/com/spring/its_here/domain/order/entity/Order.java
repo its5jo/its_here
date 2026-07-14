@@ -4,6 +4,7 @@ import com.spring.its_here.domain.order.enums.OrderStatus;
 import com.spring.its_here.global.base.BaseDeletableEntity;
 import com.spring.its_here.global.base.BaseEntity;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -15,7 +16,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "p_order")
 @Getter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Order extends BaseDeletableEntity {
 
     @Id
@@ -41,16 +42,19 @@ public class Order extends BaseDeletableEntity {
     @Column(name = "request_memo")
     private String requestMemo;
 
+    private Order(UUID storeId, Long userId, String deliveryAddress,
+                  String requestMemo, int totalAmount) {
+        this.storeId = storeId;
+        this.userId = userId;
+        this.deliveryAddress = deliveryAddress;
+        this.requestMemo = requestMemo;
+        this.totalAmount = totalAmount;
+        this.status = OrderStatus.REQUESTED;
+    }
+
     public static Order create(UUID storeId, Long userId,
                                String deliveryAddress, String requestMemo,
                                int totalAmount) {
-        Order order = new Order();
-        order.storeId = storeId;
-        order.userId = userId;
-        order.deliveryAddress = deliveryAddress;
-        order.requestMemo = requestMemo;
-        order.totalAmount = totalAmount;
-        order.status = OrderStatus.REQUESTED;
-        return order;
+        return new Order(storeId, userId, deliveryAddress, requestMemo, totalAmount);
     }
 }

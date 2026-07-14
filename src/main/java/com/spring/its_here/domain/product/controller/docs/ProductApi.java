@@ -1,8 +1,10 @@
 package com.spring.its_here.domain.product.controller.docs;
 
 import com.spring.its_here.domain.product.dto.request.ProductCreateRequestDto;
+import com.spring.its_here.domain.product.dto.request.ProductSearchCondition;
 import com.spring.its_here.domain.product.dto.request.ProductUpdateRequestDto;
 import com.spring.its_here.domain.product.dto.response.ProductCreateResponseDto;
+import com.spring.its_here.domain.product.dto.response.ProductCursorResponseDto;
 import com.spring.its_here.domain.product.dto.response.ProductResponseDto;
 import com.spring.its_here.domain.product.dto.response.ProductUpdateResponseDto;
 import com.spring.its_here.global.advice.ErrorResponse;
@@ -146,10 +148,7 @@ public interface ProductApi {
             responses = {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "200",
-                            description = "상품 조회 성공",
-                            content = @Content(
-                                    schema = @Schema(implementation = ProductResponseDto.class)
-                            )
+                            description = "상품 조회 성공"
                     ),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "404",
@@ -167,5 +166,47 @@ public interface ProductApi {
                     example = "550e8400-e29b-41d4-a716-446655440000"
             )
             UUID productId
+    );
+
+    @Operation(
+            summary = "가게 상품 목록 조회",
+            description = """
+                    가게 ID를 이용해 해당 가게의 상품 목록을 커서 기반으로 조회합니다.
+                    커서가 없는 경우 첫 페이지를 조회합니다.
+                    """,
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "200",
+                            description = "가게 상품 목록 조회 성공"
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "400",
+                            description = "잘못된 조회 조건",
+                            content = @Content(
+                                    schema = @Schema(implementation = ErrorResponse.class)
+                            )
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "404",
+                            description = "가게를 찾을 수 없음",
+                            content = @Content(
+                                    schema = @Schema(implementation = ErrorResponse.class)
+                            )
+                    )
+            }
+    )
+    ResponseEntity<ApiResponse<ProductCursorResponseDto>> getStoreProducts(
+            @Parameter(
+                    description = "상품 조회 및 정렬 조건",
+                    required = true
+            )
+            ProductSearchCondition condition,
+
+            @Parameter(
+                    description = "가게 ID",
+                    required = true,
+                    example = "550e8400-e29b-41d4-a716-446655440000"
+            )
+            UUID storeId
     );
 }
