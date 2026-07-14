@@ -26,6 +26,7 @@ public enum ErrorCode {
     // category
     CATEGORY_NAME_DUPLICATE(HttpStatus.CONFLICT, "동일한 카테고리가 존재합니다.", "C-001"),
     CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "카테고리가 존재하지 않습니다.", "C-002"),
+    CATEGORY_INVALID_SORT_FIELD(HttpStatus.BAD_REQUEST, "카테고리 이름과 생성일시로만 정렬할 수 있습니다.", "C-003"),
 
     // area
     AREA_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 등록된 지역입니다.", "A-001"),
@@ -34,12 +35,19 @@ public enum ErrorCode {
 
     // order
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 주문입니다.", "O-001"),
+    ORDER_ACCESS_FORBIDDEN(HttpStatus.FORBIDDEN, "해당 주문 내역에 대한 접근 권한이 없습니다.", "O-002"),
+    ORDER_CANCEL_TIMEOUT(HttpStatus.BAD_REQUEST," 취소 가능한 주문 상태가 아닙니다.", "O-003"),
+    ORDER_STATUS_TRANSITION_INVALID(HttpStatus.BAD_REQUEST, "유효하지 않은 주문 상태 변경입니다.", "O-004"),
+
+    // payment
+    PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 결제입니다.", "PM-001"),
 
     // store
     STORE_NOT_FOUND(HttpStatus.NOT_FOUND, "가게가 존재하지 않습니다.", "S-001"),
     STORE_NAME_DUPLICATE(HttpStatus.CONFLICT, "동일한 이름의 가게가 존재합니다.", "S-002"),
     STORE_ALREADY_REGISTERED(HttpStatus.CONFLICT, "이미 등록한 가게가 존재합니다.", "S-003"),
     STORE_NOT_OWNED(HttpStatus.FORBIDDEN, "가게 접근 권한이 없습니다.", "S-004"),
+    STORE_CLOSED(HttpStatus.BAD_REQUEST, "가게가 영업 중이 아닙니다.", "S-005"),
 
     // review
     REVIEW_CONTENT_VALID(HttpStatus.BAD_REQUEST, "리뷰내용 255자 이하입니다", "R-001"),
@@ -51,7 +59,11 @@ public enum ErrorCode {
     REVIEW_CONFLICT(HttpStatus.CONFLICT, "리뷰가 다른 요청에 의해 변경되었습니다. 다시 시도해주세요.", "R-007"),
 
     // product
-    PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "상품이 존재하지 않습니다.", "P-001");
+    PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "상품이 존재하지 않습니다.", "P-001"),
+
+    // address
+    ADDRESS_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 등록된 주소입니다.", "AD-001"),
+    ADDRESS_NOT_FOUND(HttpStatus.NOT_FOUND, "주소를 찾을 수 없습니다.", "AD-002");
 
     private final String message;
     private final HttpStatus status;

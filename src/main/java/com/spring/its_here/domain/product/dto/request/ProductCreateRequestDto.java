@@ -24,6 +24,9 @@ public record ProductCreateRequestDto(
         Integer price,
 
         @NotNull
-        Boolean hasHidden
+        Boolean hasHidden,
+
+        @NotNull
+        Boolean useAiDescription
 ) {
 }

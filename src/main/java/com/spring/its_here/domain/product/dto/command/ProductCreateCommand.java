@@ -11,6 +11,7 @@ public record ProductCreateCommand(
         String description,
         int price,
         boolean hasHidden,
+        boolean useAiDescription,
         MultipartFile image
 ) {
     public static ProductCreateCommand of(
@@ -23,6 +24,7 @@ public record ProductCreateCommand(
                 request.description(),
                 request.price(),
                 request.hasHidden(),
+                request.useAiDescription(),
                 image
         );
     }

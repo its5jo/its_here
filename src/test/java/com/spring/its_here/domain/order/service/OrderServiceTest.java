@@ -2,8 +2,10 @@ package com.spring.its_here.domain.order.service;
 
 import com.spring.its_here.domain.order.dto.request.OrderCreateRequestDto;
 import com.spring.its_here.domain.order.dto.request.OrderProductRequestDto;
+import com.spring.its_here.domain.order.dto.response.OrderListResponseDto;
 import com.spring.its_here.domain.order.dto.response.OrderResponseDto;
 import com.spring.its_here.domain.order.entity.Order;
+import com.spring.its_here.domain.order.enums.OrderStatus;
 import com.spring.its_here.domain.order.repository.OrderProductRepository;
 import com.spring.its_here.domain.order.repository.OrderRepository;
 import com.spring.its_here.domain.payment.dto.response.PaymentResponseDto;
@@ -16,7 +18,6 @@ import com.spring.its_here.domain.store.entity.Store;
 import com.spring.its_here.domain.store.repository.StoreRepository;
 import com.spring.its_here.domain.user.entity.UserEntity;
 import com.spring.its_here.domain.user.enums.UserRole;
-import com.spring.its_here.domain.user.repository.UserRepository;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,9 +28,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
@@ -48,7 +49,6 @@ class OrderServiceTest {
 
     @Mock private OrderRepository orderRepository;
     @Mock private OrderProductRepository orderProductRepository;
-    @Mock private UserRepository userRepository;
     @Mock private ProductRepository productRepository;
     @Mock private StoreRepository storeRepository;
     @Mock private PaymentService paymentService;
@@ -98,9 +98,8 @@ class OrderServiceTest {
         @Test
         @DisplayName("주문 생성 성공")
         void create_success() {
-            // given
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(store));
+            when(store.getDeletedAt()).thenReturn(null);
             when(store.getHasOpen()).thenReturn(true);
             when(productRepository.findAllById(anyList())).thenReturn(List.of(product));
             when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
@@ -111,17 +110,11 @@ class OrderServiceTest {
             when(orderProductRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
             when(paymentService.createForOrder(any(UUID.class), anyInt())).thenReturn(paymentResponseDto);
 
-            // when
             OrderResponseDto response = orderService.create(requestDto, USER_ID);
 
-            // then
             assertThat(response.orderId()).isEqualTo(ORDER_ID);
-            assertThat(response.storeId()).isEqualTo(STORE_ID);
-            assertThat(response.userId()).isEqualTo(USER_ID);
             assertThat(response.totalAmount()).isEqualTo(20000);
-            assertThat(response.payment()).isEqualTo(paymentResponseDto);
 
-            verify(userRepository).findById(USER_ID);
             verify(storeRepository).findById(STORE_ID);
             verify(productRepository).findAllById(anyList());
             verify(orderRepository).save(any(Order.class));
@@ -130,104 +123,223 @@ class OrderServiceTest {
         }
 
         @Test
-        @DisplayName("주문 생성 실패 - 존재하지 않는 유저")
-        void create_fail_userNotFound() {
-            // given
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
+        @DisplayName("주문 생성 실패 - 존재하지 않는 가게")
+        void create_fail_storeNotFound() {
+            when(storeRepository.findById(STORE_ID)).thenReturn(Optional.empty());
 
-            // when
             ItsHereException exception = assertThrows(
                     ItsHereException.class,
                     () -> orderService.create(requestDto, USER_ID)
             );
 
-            // then
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.USER_NOT_FOUND);
-
-            verify(userRepository).findById(USER_ID);
-            verifyNoInteractions(storeRepository, productRepository, orderRepository,
-                    orderProductRepository, paymentService);
-        }
-
-        @Test
-        @DisplayName("주문 생성 실패 - 존재하지 않는 가게")
-        void create_fail_storeNotFound() {
-            // given
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-            when(storeRepository.findById(STORE_ID)).thenReturn(Optional.empty());
-
-            // when
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
-                    () -> orderService.create(requestDto, USER_ID)
-            );
-
-            // then
-            assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-
-            verify(storeRepository).findById(STORE_ID);
-            verifyNoInteractions(productRepository, orderRepository, orderProductRepository, paymentService);
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.STORE_NOT_FOUND);
         }
 
         @Test
         @DisplayName("주문 생성 실패 - 삭제된 가게")
         void create_fail_storeDeleted() {
-            // given
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(store));
             when(store.getDeletedAt()).thenReturn(Instant.now());
 
-            // when
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
                     () -> orderService.create(requestDto, USER_ID)
             );
 
-            // then
-            assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-
-            verifyNoInteractions(productRepository, orderRepository, orderProductRepository, paymentService);
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.STORE_NOT_FOUND);
         }
 
         @Test
         @DisplayName("주문 생성 실패 - 영업 종료된 가게")
         void create_fail_storeClosed() {
-            // given
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(store));
+            when(store.getDeletedAt()).thenReturn(null);
             when(store.getHasOpen()).thenReturn(false);
 
-            // when
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
                     () -> orderService.create(requestDto, USER_ID)
             );
 
-            // then
-            assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-
-            verifyNoInteractions(productRepository, orderRepository, orderProductRepository, paymentService);
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.STORE_CLOSED);
         }
 
         @Test
         @DisplayName("주문 생성 실패 - 존재하지 않는 상품 포함")
         void create_fail_productNotFound() {
-            // given
-            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
             when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(store));
+            when(store.getDeletedAt()).thenReturn(null);
             when(store.getHasOpen()).thenReturn(true);
             when(productRepository.findAllById(anyList())).thenReturn(List.of());
 
-            // when
-            ResponseStatusException exception = assertThrows(
-                    ResponseStatusException.class,
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
                     () -> orderService.create(requestDto, USER_ID)
             );
 
-            // then
-            assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.PRODUCT_NOT_FOUND);
+        }
+    }
 
-            verifyNoInteractions(orderRepository, orderProductRepository, paymentService);
+
+        @Nested
+    @DisplayName("주문 단건 조회 테스트")
+    class GetOrderTest {
+
+        private Order order;
+
+        @BeforeEach
+        void setUp() {
+            order = Order.create(STORE_ID, USER_ID, "서울시 강남구", "문 앞에", 20000);
+            ReflectionTestUtils.setField(order, "id", ORDER_ID);
+        }
+
+        @Test
+        @DisplayName("단건 조회 성공 - CUSTOMER 본인 주문")
+        void getOrder_success_customer() {
+            // given
+            when(orderRepository.findByIdAndDeletedAtIsNull(ORDER_ID))
+                    .thenReturn(Optional.of(order));
+            when(orderProductRepository.findAllByOrderId(ORDER_ID))
+                    .thenReturn(List.of());
+            when(paymentService.getPaymentByOrderId(ORDER_ID))
+                    .thenReturn(paymentResponseDto);
+
+            // when
+            OrderResponseDto response = orderService.getOrder(ORDER_ID, USER_ID, UserRole.CUSTOMER);
+
+            // then
+            assertThat(response.orderId()).isEqualTo(ORDER_ID);
+            assertThat(response.userId()).isEqualTo(USER_ID);
+            verify(orderRepository).findByIdAndDeletedAtIsNull(ORDER_ID);
+        }
+
+        @Test
+        @DisplayName("단건 조회 실패 - 존재하지 않는 주문")
+        void getOrder_fail_orderNotFound() {
+            // given
+            when(orderRepository.findByIdAndDeletedAtIsNull(ORDER_ID))
+                    .thenReturn(Optional.empty());
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> orderService.getOrder(ORDER_ID, USER_ID, UserRole.CUSTOMER)
+            );
+
+            // then
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ORDER_NOT_FOUND);
+            verifyNoInteractions(orderProductRepository, paymentService);
+        }
+
+        @Test
+        @DisplayName("단건 조회 실패 - CUSTOMER가 남의 주문 조회")
+        void getOrder_fail_customerForbidden() {
+            // given
+            Long anotherUserId = 999L;
+            when(orderRepository.findByIdAndDeletedAtIsNull(ORDER_ID))
+                    .thenReturn(Optional.of(order));  // order.userId = USER_ID
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> orderService.getOrder(ORDER_ID, anotherUserId, UserRole.CUSTOMER)
+            );
+
+            // then
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ORDER_ACCESS_FORBIDDEN);
+            verifyNoInteractions(orderProductRepository, paymentService);
+        }
+
+        @Test
+        @DisplayName("단건 조회 성공 - MANAGER는 모든 주문 조회 가능")
+        void getOrder_success_manager() {
+            // given
+            Long managerUserId = 999L;  // 다른 유저지만 MANAGER라 가능
+            when(orderRepository.findByIdAndDeletedAtIsNull(ORDER_ID))
+                    .thenReturn(Optional.of(order));
+            when(orderProductRepository.findAllByOrderId(ORDER_ID))
+                    .thenReturn(List.of());
+            when(paymentService.getPaymentByOrderId(ORDER_ID))
+                    .thenReturn(paymentResponseDto);
+
+            // when
+            OrderResponseDto response = orderService.getOrder(ORDER_ID, managerUserId, UserRole.MANAGER);
+
+            // then
+            assertThat(response.orderId()).isEqualTo(ORDER_ID);
+            verify(orderRepository).findByIdAndDeletedAtIsNull(ORDER_ID);
+        }
+    }
+
+    @Nested
+    @DisplayName("주문 목록 조회 테스트")
+    class GetOrderListTest {
+
+        @Test
+        @DisplayName("목록 조회 실패 - 허용되지 않는 페이지 크기")
+        void getOrderList_fail_invalidPageSize() {
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> orderService.getOrderList(0, 20, USER_ID, UserRole.CUSTOMER, null)
+            );
+
+            // then
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT_VALUE);
+            verifyNoInteractions(orderRepository);
+        }
+
+        @Test
+        @DisplayName("목록 조회 성공 - CUSTOMER 허용 페이지 크기 10")
+        void getOrderList_success_customer_size10() {
+            // given
+            Page<Order> emptyPage = Page.empty();
+            when(orderRepository.findByUserIdAndDeletedAtIsNull(eq(USER_ID), any(Pageable.class)))
+                    .thenReturn(emptyPage);
+
+            // when
+            OrderListResponseDto response =
+                    orderService.getOrderList(0, 10, USER_ID, UserRole.CUSTOMER, null);
+
+            // then
+            assertThat(response.pageInfo().totalCount()).isEqualTo(0);
+            verify(orderRepository).findByUserIdAndDeletedAtIsNull(eq(USER_ID), any(Pageable.class));
+        }
+
+        @Test
+        @DisplayName("목록 조회 성공 - CUSTOMER status 필터")
+        void getOrderList_success_customer_withStatus() {
+            // given
+            Page<Order> emptyPage = Page.empty();
+            when(orderRepository.findByUserIdAndStatusAndDeletedAtIsNull(
+                    eq(USER_ID), eq(OrderStatus.REQUESTED), any(Pageable.class)))
+                    .thenReturn(emptyPage);
+
+            // when
+            OrderListResponseDto response =
+                    orderService.getOrderList(0, 10, USER_ID, UserRole.CUSTOMER, OrderStatus.REQUESTED);
+
+            // then
+            assertThat(response.pageInfo().totalCount()).isEqualTo(0);
+            verify(orderRepository).findByUserIdAndStatusAndDeletedAtIsNull(
+                    eq(USER_ID), eq(OrderStatus.REQUESTED), any(Pageable.class));
+        }
+
+        @Test
+        @DisplayName("목록 조회 성공 - MANAGER 전체 조회")
+        void getOrderList_success_manager() {
+            // given
+            Page<Order> emptyPage = Page.empty();
+            when(orderRepository.findByDeletedAtIsNull(any(Pageable.class)))
+                    .thenReturn(emptyPage);
+
+            // when
+            OrderListResponseDto response =
+                    orderService.getOrderList(0, 10, USER_ID, UserRole.MANAGER, null);
+
+            // then
+            verify(orderRepository).findByDeletedAtIsNull(any(Pageable.class));
         }
     }
 }

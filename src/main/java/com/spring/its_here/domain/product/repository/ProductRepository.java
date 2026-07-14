@@ -19,6 +19,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
                 FROM Product p
                 WHERE p.store.id = :storeId
                   AND p.deletedAt IS NULL
+                  AND p.hasHidden = false
                   AND (
                       :cursor IS NULL
                       OR (

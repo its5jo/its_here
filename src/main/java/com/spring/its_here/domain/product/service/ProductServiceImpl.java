@@ -1,5 +1,7 @@
 package com.spring.its_here.domain.product.service;
 
+import com.spring.its_here.domain.aihistory.entity.AiHistory;
+import com.spring.its_here.domain.aihistory.repository.AiHistoryRepository;
 import com.spring.its_here.domain.product.dto.command.ProductCreateCommand;
 import com.spring.its_here.domain.product.dto.command.ProductUpdateCommand;
 import com.spring.its_here.domain.product.dto.request.ProductSearchCondition;
@@ -13,6 +15,8 @@ import com.spring.its_here.domain.user.enums.UserRole;
 import com.spring.its_here.domain.user.repository.UserRepository;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
+import com.spring.its_here.infrastructure.ai.AiClient;
+import com.spring.its_here.infrastructure.ai.ProductDescriptionPromptGenerator;
 import com.spring.its_here.infrastructure.storage.ImageStorage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +39,9 @@ public class ProductServiceImpl implements ProductService {
     private final ImageStorage imageStorage;
     private final StoreRepository storeRepository;
     private final UserRepository userRepository;
+    private final AiClient aiClient;
+    private final ProductDescriptionPromptGenerator productDescriptionPromptGenerator;
+    private final AiHistoryRepository aiHistoryRepository;
 
     @Override
     @Transactional
@@ -59,9 +66,23 @@ public class ProductServiceImpl implements ProductService {
             log.debug("상품 이미지 생성 성공. path={}", imagePath);
         }
 
+        String description = productCreateCommand.description();
+        String aiResponse = null;
+        String prompt = null;
+
+        if (productCreateCommand.useAiDescription()) {
+            log.debug("상품 설명 AI 생성 요청. storeId={}, userId={}", store.getId(), loginUserId);
+            prompt = productDescriptionPromptGenerator.generate(
+                    productCreateCommand.name(),
+                    productCreateCommand.price()
+            );
+            aiResponse = aiClient.generateDescription(prompt);
+            description = aiResponse;
+        }
+
         Product product = Product.create(
                 productCreateCommand.name(),
-                productCreateCommand.description(),
+                description,
                 productCreateCommand.hasHidden(),
                 productCreateCommand.price(),
                 imagePath,
@@ -70,6 +91,20 @@ public class ProductServiceImpl implements ProductService {
 
         Product saved = productRepository.save(product);
         log.info("상품 생성 완료. productId={}, storeId={}, userId={}", saved.getId(), store.getId(), loginUserId);
+
+        if (aiResponse != null) {
+            AiHistory savedAiHistory = aiHistoryRepository.save(
+                    AiHistory.create(saved, prompt, aiResponse)
+            );
+            log.info(
+                    "상품 설명 AI 생성 및 이력 저장 완료. aiHistoryId={}, productId={}, storeId={}, userId={}",
+                    savedAiHistory.getId(),
+                    saved.getId(),
+                    store.getId(),
+                    loginUserId
+            );
+        }
+
         return new ProductCreateResponseDto(saved.getId());
     }
 
