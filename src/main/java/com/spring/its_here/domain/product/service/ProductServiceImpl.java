@@ -160,10 +160,28 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public ProductCursorResponseDto searchStoreProducts(ProductSearchCondition condition, UUID storeId) {
+    public ProductCursorResponseDto searchStoreProducts(
+            ProductSearchCondition condition,
+            UUID storeId
+    ) {
+        log.debug(
+                "가게 상품 목록 조회 요청. storeId={}, cursor={}, idAfter={}, sortBy={}, sortDirection={}, limit={}",
+                storeId,
+                condition.cursor(),
+                condition.idAfter(),
+                condition.sortBy(),
+                condition.sortDirection(),
+                condition.limit()
+        );
+
         storeRepository.findById(storeId)
-                .orElseThrow(() -> new ItsHereException(ErrorCode.STORE_NOT_FOUND));
+                .orElseThrow(() -> {
+                    log.warn("상품 목록 조회 실패 - 가게를 찾을 수 없음. storeId={}", storeId);
+                    return new ItsHereException(ErrorCode.STORE_NOT_FOUND);
+                });
+
         Pageable pageable = createPageable(condition);
+
         Slice<Product> productSlice = productRepository.searchProductsByCursor(
                 storeId,
                 condition.cursor(),
@@ -186,6 +204,15 @@ public class ProductServiceImpl implements ProductService {
             nextCursor = lastProduct.getCreatedAt().toString();
             nextId = lastProduct.getId();
         }
+
+        log.info(
+                "가게 상품 목록 조회 완료. storeId={}, resultCount={}, hasNext={}, nextCursor={}, nextId={}",
+                storeId,
+                content.size(),
+                productSlice.hasNext(),
+                nextCursor,
+                nextId
+        );
 
         return new ProductCursorResponseDto(
                 content,
