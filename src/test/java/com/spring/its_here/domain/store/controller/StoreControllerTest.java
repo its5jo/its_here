@@ -3,12 +3,16 @@ package com.spring.its_here.domain.store.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.spring.its_here.domain.store.dto.request.StoreCreateRequestDto;
+import com.spring.its_here.domain.store.dto.request.StoreUpdateRequestDto;
 import com.spring.its_here.domain.store.dto.response.StoreCreateResponseDto;
 import com.spring.its_here.domain.store.dto.response.StoreGetAllResponseDto;
 import com.spring.its_here.domain.store.dto.response.StoreGetOneResponseDto;
+import com.spring.its_here.domain.store.dto.response.StoreUpdateResponseDto;
 import com.spring.its_here.domain.store.service.StoreService;
+import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.GlobalExceptionHandler;
 
+import com.spring.its_here.global.advice.ItsHereException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -22,6 +26,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalTime;
@@ -34,9 +39,10 @@ import static org.mockito.ArgumentMatchers.any;
 
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -421,4 +427,178 @@ class StoreControllerTest {
                             .value("ASC"));
         }
     }
+
+    @Nested
+    @DisplayName("가게 수정")
+    class UpdateStore {
+
+        @Test
+        @DisplayName("성공")
+        void success() throws Exception {
+
+            // given
+            UUID categoryId = UUID.randomUUID();
+            UUID areaId = UUID.randomUUID();
+            UUID storeId = UUID.randomUUID();
+
+            StoreUpdateRequestDto requestDto =
+                    new StoreUpdateRequestDto(
+                            "악어떡볶이 한양대점",
+                            "서울특별시 성동구",
+                            true,
+                            areaId,
+                            categoryId,
+                            LocalTime.of(7, 0),
+                            LocalTime.of(21, 0)
+                    );
+
+            StoreUpdateResponseDto responseDto =
+                    new StoreUpdateResponseDto("악어떡볶이 한양대점", "서울특별시 성동구",
+                            "성수1동", "분식", true,
+                            LocalTime.of(7, 0), LocalTime.of(21, 0));
+
+            // Service가 정상적으로 응답한다고 가정
+            given(storeService.updateStore(any(), any(), any()))
+                    .willReturn(responseDto);
+
+            // when & then
+            mockMvc.perform(
+                            put("/api/stores/{storeId}", storeId)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(requestDto))
+                    )
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message")
+                            .value("가게 정보 수정 성공"))
+                    .andExpect(jsonPath("$.code")
+                            .value("SUCCESS"))
+
+                    .andExpect(jsonPath("$.data.name")
+                            .value("악어떡볶이 한양대점"))
+                    .andExpect(jsonPath("$.data.address")
+                            .value("서울특별시 성동구"))
+                    .andExpect(jsonPath("$.data.area")
+                            .value("성수1동"))
+                    .andExpect(jsonPath("$.data.category")
+                            .value("분식"))
+                    .andExpect(jsonPath("$.data.hasOpen")
+                            .value(true))
+                    .andExpect(jsonPath("$.data.openAt")
+                            .value("07:00"))
+                    .andExpect(jsonPath("$.data.closedAt")
+                            .value("21:00"));
+
+        }
+
+        @Test
+        @DisplayName("없거나 삭제된 가게 수정 시도")
+        void update_fail_when_store_not_found() throws Exception {
+
+            UUID storeId = UUID.randomUUID();
+
+            StoreUpdateRequestDto requestDto =
+                    new StoreUpdateRequestDto(
+                            "악어떡볶이",
+                            "서울 성동구",
+                            true,
+                            UUID.randomUUID(),
+                            UUID.randomUUID(),
+                            LocalTime.of(10, 0),
+                            LocalTime.of(20, 0)
+                    );
+
+            given(storeService.updateStore(any(), any(), any()))
+                    .willThrow(new ItsHereException(ErrorCode.STORE_NOT_FOUND));
+
+            mockMvc.perform(
+                            put("/api/stores/{storeId}", storeId)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(requestDto))
+                    )
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.code")
+                            .value("S-001"));
+
+        }
+
+        @Test
+        @DisplayName("NOT NULL 필드 누락")
+        void update_fail_when_invalid_request() throws Exception {
+
+            UUID storeId = UUID.randomUUID();
+
+            StoreUpdateRequestDto requestDto =
+                    new StoreUpdateRequestDto(
+                            "",
+                            "",
+                            true,
+                            null,
+                            null,
+                            LocalTime.of(10,0),
+                            LocalTime.of(20,0)
+                    );
+
+            mockMvc.perform(
+                            put("/api/stores/{storeId}", storeId)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(requestDto))
+                    )
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code")
+                    .value("CM-005"));
+
+            verify(storeService, never())
+                    .updateStore(any(), any(), any());
+        }
+
+    }
+
+    @Nested
+    @DisplayName("가게 삭제")
+    class DeleteStore{
+
+        @Test
+        @DisplayName("성공")
+        void success() throws Exception {
+
+            UUID storeId = UUID.randomUUID();
+
+            mockMvc.perform(
+                            delete("/api/stores/{storeId}", storeId)
+                    )
+                    .andExpect(status().isNoContent());
+
+            verify(storeService)
+                    .deleteStore(any(), eq(storeId));
+        }
+
+        @Test
+        @DisplayName("가게 주인이 다른 사람 가게 삭제 시도")
+        @WithMockUser(
+                username = "owner2",
+                authorities = "OWNER"
+        )
+        void fail_when_owner_try_to_others_store() throws Exception {
+
+            // given
+            UUID storeId = UUID.randomUUID();
+
+            doThrow(new ItsHereException(ErrorCode.STORE_NOT_OWNED))
+                    .when(storeService)
+                    .deleteStore(any(), any());
+
+            // when & then
+            mockMvc.perform(
+                            delete("/api/stores/{storeId}", storeId)
+                    )
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code")
+                            .value("S-004"));
+
+            verify(storeService)
+                    .deleteStore(any(), eq(storeId));
+        }
+
+    }
+
 }
