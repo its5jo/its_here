@@ -245,9 +245,6 @@ class CategoryServiceTest {
             Pageable pageable =
                     PageRequest.of(0, 20, Sort.by("createdAt").descending());
 
-            Pageable expectedPageable =
-                    PageRequest.of(0, 10, Sort.by("createdAt").descending());
-
             CategoryGetAllResponseDto dto1 =
                     new CategoryGetAllResponseDto(UUID.randomUUID(), "야식", false);
 
@@ -260,7 +257,7 @@ class CategoryServiceTest {
             when(categoryRepository.getAllCategories(
                     eq(requestDto.name()),
                     eq(requestDto.hasHidden()),
-                    eq(expectedPageable)
+                    any(Pageable.class)
             )).thenReturn(dtoList);
 
             // when

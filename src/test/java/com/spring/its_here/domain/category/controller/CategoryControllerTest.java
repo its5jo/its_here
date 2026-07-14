@@ -16,6 +16,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -36,6 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(MockitoExtension.class)
 class CategoryControllerTest {
@@ -246,7 +249,7 @@ class CategoryControllerTest {
             CategoryGetAllRequestDto requestDto = new CategoryGetAllRequestDto("식", false);
 
             Pageable pageable =
-                    PageRequest.of(0, 10, Sort.by("createdAt").ascending());
+                    PageRequest.of(0, 10, Sort.by("createdAt").descending());
 
             CategoryGetAllResponseDto dto1 =
                     new CategoryGetAllResponseDto(UUID.randomUUID(), "야식", false);
@@ -294,7 +297,71 @@ class CategoryControllerTest {
                     .andExpect(jsonPath("$.data.pageInfo.sortBy")
                             .value("createdAt"))
                     .andExpect(jsonPath("$.data.pageInfo.sortDirection")
-                            .value("ASC"));
+                            .value("DESC"));
+        }
+
+        @Test
+        @DisplayName("size가 10,30,50이 아닌 경우 변경 후 조회")
+        void validateSizeAndUpdate() throws Exception {
+
+            // given
+            CategoryGetAllRequestDto requestDto = new CategoryGetAllRequestDto("식", false);
+
+            Pageable newPageable =
+                    PageRequest.of(0, 10, Sort.by("createdAt").descending());
+
+            CategoryGetAllResponseDto dto1 =
+                    new CategoryGetAllResponseDto(UUID.randomUUID(), "야식", false);
+            Page<CategoryGetAllResponseDto> page =
+                    new PageImpl<>(List.of(dto1), newPageable, 1);
+
+            given(categoryService.getAllCategories(any(), eq(newPageable)))
+                    .willReturn(page);
+
+            // when & then
+            mockMvc.perform(
+                            get("/api/categories")
+                                    .param("name", requestDto.name())
+                                    .param("hasHidden", String.valueOf(requestDto.hasHidden()))
+                                    .param("page", "0")
+                                    .param("size", "100")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                    )
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message").value("카테고리 목록 조회 성공"));
+
+            ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+            verify(categoryService).getAllCategories(any(), pageableCaptor.capture());
+
+            Pageable passedPageable = pageableCaptor.getValue();
+
+            assertThat(passedPageable.getPageSize()).isEqualTo(10);
+        }
+
+        @Test
+        @DisplayName("정렬 기준이 생성일시, 카테고리 이름이 아닌 경우")
+        void fail_invalidSortField() throws Exception {
+
+            // given
+            CategoryGetAllRequestDto requestDto
+                    = new CategoryGetAllRequestDto("식", false);
+
+            // when & then
+            mockMvc.perform(
+                            get("/api/categories")
+                                    .param("name", requestDto.name())
+                                    .param("hasHidden", String.valueOf(requestDto.hasHidden()))
+                                    .param("page", "0")
+                                    .param("size", "10")
+                                    .param("sort", "updatedAt,desc")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                    )
+                    .andDo(print())
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code")
+                            .value("C-003"));
         }
     }
 
