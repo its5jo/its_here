@@ -1,6 +1,7 @@
 package com.spring.its_here.domain.area.controller;
 
 
+import com.spring.its_here.domain.area.controller.docs.AreaApi;
 import com.spring.its_here.domain.area.dto.request.AreaCreateRequestDto;
 import com.spring.its_here.domain.area.dto.request.AreaGetAllRequestDto;
 import com.spring.its_here.domain.area.dto.request.AreaUpdateRequestDto;
@@ -27,7 +28,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/areas")
 @RequiredArgsConstructor
-public class AreaController {
+public class AreaController implements AreaApi {
     private final AreaService areaService;
 
     @PostMapping

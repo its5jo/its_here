@@ -43,10 +43,13 @@ public enum ErrorCode {
     STORE_NOT_OWNED(HttpStatus.FORBIDDEN, "가게 접근 권한이 없습니다.", "S-004"),
     STORE_CLOSED(HttpStatus.BAD_REQUEST, "가게가 영업 중이 아닙니다.", "S-005"),
 
+    // review
     REVIEW_CONTENT_VALID(HttpStatus.BAD_REQUEST, "리뷰내용 255자 이하입니다", "R-001"),
-    REVIEW_FORBIDDEN(HttpStatus.NOT_FOUND, "리뷰작성 권한이 없습니다.", "R-002"),
-    REVIEW_ORDER_NOT_COMPLETED(HttpStatus.NOT_FOUND, "완료된 주문에만 리뷰를 작성할 수 있습니다.", "R-003"),
+    REVIEW_FORBIDDEN(HttpStatus.FORBIDDEN, "리뷰작성 권한이 없습니다.", "R-002"),
+    REVIEW_ORDER_NOT_COMPLETED(HttpStatus.BAD_REQUEST, "완료된 주문에만 리뷰를 작성할 수 있습니다.", "R-003"),
     REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 존재하는 리뷰입니다.", "R-004"),
+    REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "리뷰가 존재하지 않습니다.", "R-005"),
+    REVIEW_INVALID_SORT_BY(HttpStatus.BAD_REQUEST, "정렬 기준은 createdAt만 가능합니다.", "R-006"),
 
     // product
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "상품이 존재하지 않습니다.", "P-001");
