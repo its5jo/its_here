@@ -1,15 +1,14 @@
 package com.spring.its_here.domain.category.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.spring.its_here.domain.category.dto.request.CategoryCreateRequestDto;
+import com.spring.its_here.domain.category.dto.request.CategoryGetAllRequestDto;
 import com.spring.its_here.domain.category.dto.response.CategoryCreateResponseDto;
+import com.spring.its_here.domain.category.dto.response.CategoryGetAllResponseDto;
+import com.spring.its_here.domain.category.dto.response.CategoryGetOneResponseDto;
 import com.spring.its_here.domain.category.entity.Category;
 import com.spring.its_here.domain.category.repository.CategoryRepository;
 
@@ -28,8 +27,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.*;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @ExtendWith(MockitoExtension.class)
@@ -85,7 +87,7 @@ class CategoryServiceTest {
 
             // when
             CategoryCreateResponseDto response =
-                    categoryService.createCategory(userDetails, request);
+                    categoryService.createCategory(request);
 
             // then
             ArgumentCaptor<Category> categoryCaptor =
@@ -121,7 +123,7 @@ class CategoryServiceTest {
             // when & then
             ItsHereException exception = assertThrows(
                     ItsHereException.class,
-                    () -> categoryService.createCategory(userDetails, request)
+                    () -> categoryService.createCategory(request)
             );
 
             // then
@@ -136,4 +138,142 @@ class CategoryServiceTest {
         }
 
     }
+
+    @Nested
+    @DisplayName("카테고리 단건 조회")
+    class GetOneCategory {
+
+        @Test
+        @DisplayName("성공")
+        void success() {
+
+            // given
+            UUID categoryId = UUID.randomUUID();
+
+            Category category = Category.createCategory("야식", false);
+
+            ReflectionTestUtils.setField(category, "id", categoryId);
+
+            when(categoryRepository.findByIdAndDeletedAtIsNull(categoryId))
+                    .thenReturn(Optional.of(category));
+
+            // when
+            CategoryGetOneResponseDto responseDto =
+                    categoryService.getOneCategory(categoryId);
+
+            // then
+            assertThat(responseDto).isNotNull();
+            assertThat(responseDto.name()).isEqualTo(category.getName());
+            assertThat(responseDto.hasHidden()).isEqualTo(category.isHasHidden());
+
+        }
+
+        @Test
+        @DisplayName("없거나 삭제된 카테고리")
+        void not_exits_or_deleted() {
+
+            // given
+            UUID categoryId = UUID.randomUUID();
+
+            when(categoryRepository.findByIdAndDeletedAtIsNull(categoryId))
+                    .thenReturn(Optional.empty());
+
+            // when & then
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> categoryService.getOneCategory(categoryId)
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.CATEGORY_NOT_FOUND);
+
+        }
+
+    }
+
+    @Nested
+    @DisplayName("카테고리 목록 조회")
+    class getAllCategories {
+
+        @Test
+        @DisplayName("성공")
+        void success() {
+
+            // given
+            CategoryGetAllRequestDto requestDto =
+                    new CategoryGetAllRequestDto("식", false);
+
+            Pageable pageable =
+                    PageRequest.of(0, 10, Sort.by("createdAt").descending());
+
+            CategoryGetAllResponseDto dto1 =
+                    new CategoryGetAllResponseDto(UUID.randomUUID(), "야식", false);
+
+            CategoryGetAllResponseDto dto2 =
+                    new CategoryGetAllResponseDto(UUID.randomUUID(), "한식", false);
+
+            Page<CategoryGetAllResponseDto> dtoList =
+                    new PageImpl<>(List.of(dto1, dto2), pageable, 2);
+
+            when(categoryRepository.getAllCategories(
+                    eq(requestDto.name()),
+                    eq(requestDto.hasHidden()),
+                    any(Pageable.class)
+            )).thenReturn(dtoList);
+
+            // when
+            Page<CategoryGetAllResponseDto> responseDto =
+                    categoryService.getAllCategories(requestDto, pageable);
+
+            // then
+            assertThat(responseDto).isNotNull();
+            assertThat(responseDto.getContent()).hasSize(2);
+            assertThat(responseDto.getContent().get(0).name()).isEqualTo("야식");
+            assertThat(responseDto.getContent().get(1).name()).isEqualTo("한식");
+            assertThat(responseDto.getTotalElements()).isEqualTo(2);
+        }
+
+        @Test
+        @DisplayName("size가 10,30,50이 아닌 경우")
+        void success_with_page_size_change() {
+
+            // given
+            CategoryGetAllRequestDto requestDto =
+                    new CategoryGetAllRequestDto("한식", false);
+
+            Pageable pageable =
+                    PageRequest.of(0, 20, Sort.by("createdAt").descending());
+
+            Pageable expectedPageable =
+                    PageRequest.of(0, 10, Sort.by("createdAt").descending());
+
+            CategoryGetAllResponseDto dto1 =
+                    new CategoryGetAllResponseDto(UUID.randomUUID(), "야식", false);
+
+            CategoryGetAllResponseDto dto2 =
+                    new CategoryGetAllResponseDto(UUID.randomUUID(), "한식", false);
+
+            Page<CategoryGetAllResponseDto> dtoList =
+                    new PageImpl<>(List.of(dto2), pageable, 1);
+
+            when(categoryRepository.getAllCategories(
+                    eq(requestDto.name()),
+                    eq(requestDto.hasHidden()),
+                    eq(expectedPageable)
+            )).thenReturn(dtoList);
+
+            // when
+            Page<CategoryGetAllResponseDto> responseDto =
+                    categoryService.getAllCategories(requestDto, pageable);
+
+            // then
+            assertThat(responseDto).isNotNull();
+            assertThat(responseDto.getContent()).hasSize(1);
+            assertThat(responseDto.getContent().get(0).name()).isEqualTo("한식");
+            assertThat(responseDto.getTotalElements()).isEqualTo(1);
+        }
+
+    }
+
 }
