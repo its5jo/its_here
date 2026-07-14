@@ -39,11 +39,13 @@ public class CategoryService {
         return new CategoryCreateResponseDto(savedCategory.getId());
     }
 
+    @Transactional(readOnly = true)
     public CategoryGetOneResponseDto getOneCategory(UUID categoryId) {
         Category category = findCategoryByIdAndNotDeleted(categoryId);
         return CategoryGetOneResponseDto.from(category);
     }
 
+    @Transactional(readOnly = true)
     public Page<CategoryGetAllResponseDto> getAllCategories(
             CategoryGetAllRequestDto requestDto, Pageable pageable
     ) {
