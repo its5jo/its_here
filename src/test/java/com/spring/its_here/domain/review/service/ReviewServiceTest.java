@@ -6,7 +6,9 @@ import com.spring.its_here.domain.order.entity.Order;
 import com.spring.its_here.domain.order.enums.OrderStatus;
 import com.spring.its_here.domain.order.repository.OrderRepository;
 import com.spring.its_here.domain.review.dto.request.ReviewCreateRequestDto;
+import com.spring.its_here.domain.review.dto.request.ReviewUpdateRequestDto;
 import com.spring.its_here.domain.review.dto.response.ReviewCreateResponseDto;
+import com.spring.its_here.domain.review.dto.response.ReviewUpdateResponseDto;
 import com.spring.its_here.domain.review.entity.Review;
 import com.spring.its_here.domain.review.repository.ReviewRepository;
 import com.spring.its_here.domain.store.entity.Store;
@@ -24,6 +26,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -306,6 +309,58 @@ class ReviewServiceTest {
                     );
 
             verify(reviewRepository, never()).save(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("리뷰 수정")
+    class updateReview {
+        @Test
+        @DisplayName("성공")
+        void success() {
+            UserEntity user = createTestUser(userId);
+            CustomUserDetails userDetails = createUserDetails(user);
+            Store store = createTestStore(user);
+            Order order = createTestOrder(
+                    userId,
+                    OrderStatus.COMPLETED
+            );
+
+            Review review = Review.savedReview(
+                    3.0,
+                    "content",
+                    user,
+                    store,
+                    order
+            );
+
+            ReflectionTestUtils.setField(review, "id", reviewId);
+            ReflectionTestUtils.setField(
+                    review,
+                    "createdAt",
+                    Instant.now().minusSeconds(60)
+            );
+
+            ReviewUpdateRequestDto reviewUpdateRequestDto = new ReviewUpdateRequestDto(
+                    5.0,
+                    "수정된 내용"
+            );
+
+            given(reviewRepository.findByIdAndDeletedAtIsNull(reviewId)).willReturn(Optional.of(review));
+
+            ReviewUpdateResponseDto reviewUpdateResponseDto = reviewService.updateReview(
+                    userDetails,
+                    reviewId,
+                    reviewUpdateRequestDto
+            );
+
+            assertThat(reviewUpdateResponseDto).isNotNull();
+            assertThat(reviewUpdateResponseDto.reviewId()).isEqualTo(reviewId);
+            assertThat(review.getRating()).isEqualTo(3.0);
+            assertThat(review.getContent()).isEqualTo("content");
+
+            verify(userDetails).getUserEntity();
+            verify(reviewRepository).findByIdAndDeletedAtIsNull(reviewId);
         }
     }
 }

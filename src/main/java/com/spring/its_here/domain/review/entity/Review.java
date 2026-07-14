@@ -55,4 +55,12 @@ public class Review extends BaseDeletableEntity {
         review.order = order;
         return review;
     }
+
+    public void updateReview(
+            double rating,
+            String content
+    ) {
+        this.rating = rating;
+        this.content = content;
+    }
 }
