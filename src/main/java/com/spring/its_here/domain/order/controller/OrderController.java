@@ -1,6 +1,7 @@
 package com.spring.its_here.domain.order.controller;
 
 import com.spring.its_here.domain.order.dto.request.OrderCreateRequestDto;
+import com.spring.its_here.domain.order.dto.request.OrderStatusUpdateRequestDto;
 import com.spring.its_here.domain.order.dto.response.OrderCancelResponseDto;
 import com.spring.its_here.domain.order.dto.response.OrderListResponseDto;
 import com.spring.its_here.domain.order.dto.response.OrderResponseDto;
@@ -69,10 +70,16 @@ public class OrderController implements OrderApi {
     }
 
     @PutMapping("/{orderId}/status")
-    public ResponseEntity<ApiResponse<OrderResponseDto>> updateOrderStatus(
+    @Override
+    public ResponseEntity<ApiResponse<OrderStatusResponseDto>> updateOrderStatus(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable UUID orderId) {
-        OrderStatusResponseDto response = orderService.
+            @PathVariable UUID orderId,
+            @RequestBody @Valid OrderStatusUpdateRequestDto requestDto) {
+        OrderStatusResponseDto response = orderService.updateStatus(
+                orderId,
+                requestDto.status(),
+                userDetails.getUserId(),
+                userDetails.getRole());
+        return ResponseEntity.ok(ApiResponse.success("주문 상태 변경 성공",response));
     }
-
 }

@@ -133,7 +133,7 @@ public class OrderService {
         Order order = orderRepository.findByIdAndDeletedAtIsNull(orderId)
                 .orElseThrow(() -> new ItsHereException(ErrorCode.ORDER_NOT_FOUND));
 
-        // 본인의 주문인지 확인(CUSTOMER,OWNER)
+        // CUSTOMER, OWNER - 본인의 주문인지 확인
         if ((role == UserRole.CUSTOMER || role == UserRole.OWNER)
             && !order.getUserId().equals(userId)) {
             throw new ItsHereException(ErrorCode.ORDER_ACCESS_FORBIDDEN);
@@ -149,8 +149,28 @@ public class OrderService {
         return OrderCancelResponseDto.from(order, payment);
     }
 
-    public OrderStatusResponseDto updateStatus(UUID orderId, Long userId, UserRole role) {
+    @PreAuthorize("hasAnyAuthority('OWNER', 'MANAGER', 'MASTER')")
+    public OrderStatusResponseDto updateStatus(UUID orderId, OrderStatus status,
+                                               Long userId, UserRole role) {
+        // 주문 검증
+        Order order = orderRepository.findByIdAndDeletedAtIsNull(orderId)
+                .orElseThrow(() -> new ItsHereException(ErrorCode.ORDER_NOT_FOUND));
+
+        // OWNER - 본인 가게의 주문인지 확인
+        if(role == UserRole.OWNER) {
+            Store store =storeRepository.findByUserIdAndDeletedAtIsNull(userId)
+                    .orElseThrow(() -> new ItsHereException(ErrorCode.STORE_NOT_FOUND));
+            if (!order.getStoreId().equals(store.getId())) {
+                throw new ItsHereException(ErrorCode.ORDER_ACCESS_FORBIDDEN);
+            }
+        }
         
+        //상태 전이 검증
+        if (!order.getStatus().canTransitionTo(status)) {
+            throw new ItsHereException(ErrorCode.ORDER_STATUS_TRANSITION_INVALID);
+        }
+        order.updateStatus(status);
+        return OrderStatusResponseDto.from(order);
     }
 
 
