@@ -14,6 +14,8 @@ public interface StoreRepository extends JpaRepository<Store, UUID>, StoreReposi
     boolean existsByUserIdAndDeletedAtIsNull(Long userId);
     boolean existsByNameAndDeletedAtIsNullAndIdNot(String name, UUID storeId);
 
+    Optional<Store> findByUserIdAndDeletedAtIsNull(Long userId);
+
     Optional<Store> findByIdAndDeletedAtIsNull(UUID storeId);
 
     @Modifying

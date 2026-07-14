@@ -24,4 +24,13 @@ public class PaymentService {
         Payment payment = Payment.createForOrder(orderId, totalAmount, PaymentMethod.CARD);
         return PaymentResponseDto.from(paymentRepository.save(payment));
     }
+
+    public PaymentResponseDto getPayment(UUID orderId) {
+        return null;  // TODO
+    }
+
+    //주문 별 결제 조회
+    public PaymentResponseDto getPaymentByOrderId(UUID orderId) {
+        return null;  // TODO
+    }
 }
