@@ -77,7 +77,6 @@ public class OrderService {
         return OrderResponseDto.from(order, orderProducts,payment);
     }
 
-    @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
     public OrderResponseDto getOrder(UUID orderId, Long userId, UserRole role) {
         Order order = orderRepository.findByIdAndDeletedAtIsNull(orderId)
@@ -103,7 +102,6 @@ public class OrderService {
         return OrderResponseDto.from(order, orderProducts, payment);
     }
 
-    @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
     public OrderListResponseDto getOrderList(
             int page, int size, Long userId, UserRole role, OrderStatus orderStatus) {
@@ -125,7 +123,9 @@ public class OrderService {
                 case MANAGER, MASTER -> orderRepository.findByDeletedAtIsNull(pageable);
                 };
         return OrderListResponseDto.from(orders);
-        }
+    }
+
+
 
     // ===== 보조 메서드 =====
     private void validateStore(UUID storeId) {
@@ -159,4 +159,6 @@ public class OrderService {
                 .mapToInt(item -> productMap.get(item.productId()).getPrice() * item.quantity())
                 .sum();
     }
+
+
 }
