@@ -1,10 +1,9 @@
 package com.spring.its_here.domain.order.controller;
 
 import com.spring.its_here.domain.order.dto.request.OrderCreateRequestDto;
+import com.spring.its_here.domain.order.dto.response.OrderListResponseDto;
 import com.spring.its_here.domain.order.dto.response.OrderResponseDto;
-import com.spring.its_here.domain.order.dto.response.OrderSummaryResponseDto;
 import com.spring.its_here.domain.order.enums.OrderStatus;
-import com.spring.its_here.global.response.PageResponse;
 import com.spring.its_here.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -57,7 +56,7 @@ public interface OrderApi {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "허용되지 않는 페이지 크기"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "로그인 필요")
     })
-    ResponseEntity<ApiResponse<PageResponse<OrderSummaryResponseDto>>> getOrderList(
+    ResponseEntity<ApiResponse<OrderListResponseDto>> getOrderList(
             @Parameter(description = "페이지 번호 (0부터)") int page,
             @Parameter(description = "페이지 크기 (10, 30, 50만 허용)") int size,
             @Parameter(description = "주문 상태 필터 (선택)") OrderStatus orderStatus,

@@ -1,16 +1,14 @@
 package com.spring.its_here.domain.order.controller;
 
 import com.spring.its_here.domain.order.dto.request.OrderCreateRequestDto;
+import com.spring.its_here.domain.order.dto.response.OrderListResponseDto;
 import com.spring.its_here.domain.order.dto.response.OrderResponseDto;
-import com.spring.its_here.domain.order.dto.response.OrderSummaryResponseDto;
 import com.spring.its_here.domain.order.enums.OrderStatus;
 import com.spring.its_here.domain.order.service.OrderService;
 import com.spring.its_here.global.response.ApiResponse;
-import com.spring.its_here.global.response.PageResponse;
 import com.spring.its_here.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.annotations.DialectOverride;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -47,13 +45,13 @@ public class OrderController implements OrderApi {
 
     @GetMapping
     @Override
-    public ResponseEntity<ApiResponse<PageResponse<OrderSummaryResponseDto>>> getOrderList(
+    public ResponseEntity<ApiResponse<OrderListResponseDto>> getOrderList(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false)OrderStatus orderStatus,
             @AuthenticationPrincipal CustomUserDetails userDetails
             ) {
-        PageResponse<OrderSummaryResponseDto> response = orderService.getOrderList(
+        OrderListResponseDto response = orderService.getOrderList(
                 page, size, userDetails.getUserId(), userDetails.getRole(), orderStatus
         );
         return ResponseEntity.ok(ApiResponse.success("주문 목록 조회 성공", response));

@@ -2,8 +2,8 @@ package com.spring.its_here.domain.order.service;
 
 import com.spring.its_here.domain.order.dto.request.OrderCreateRequestDto;
 import com.spring.its_here.domain.order.dto.request.OrderProductRequestDto;
+import com.spring.its_here.domain.order.dto.response.OrderListResponseDto;
 import com.spring.its_here.domain.order.dto.response.OrderResponseDto;
-import com.spring.its_here.domain.order.dto.response.OrderSummaryResponseDto;
 import com.spring.its_here.domain.order.entity.Order;
 import com.spring.its_here.domain.order.entity.OrderProduct;
 import com.spring.its_here.domain.order.enums.OrderStatus;
@@ -15,23 +15,18 @@ import com.spring.its_here.domain.product.entity.Product;
 import com.spring.its_here.domain.product.repository.ProductRepository;
 import com.spring.its_here.domain.store.entity.Store;
 import com.spring.its_here.domain.store.repository.StoreRepository;
-import com.spring.its_here.domain.user.entity.UserEntity;
 import com.spring.its_here.domain.user.enums.UserRole;
-import com.spring.its_here.domain.user.repository.UserRepository;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
-import com.spring.its_here.global.response.PageResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -110,7 +105,7 @@ public class OrderService {
 
     @PreAuthorize("isAuthenticated()")
     @Transactional(readOnly = true)
-    public PageResponse<OrderSummaryResponseDto> getOrderList(
+    public OrderListResponseDto getOrderList(
             int page, int size, Long userId, UserRole role, OrderStatus orderStatus) {
 
         if (size != 10 && size != 30 && size != 50) {
@@ -129,7 +124,7 @@ public class OrderService {
                     }
                 case MANAGER, MASTER -> orderRepository.findByDeletedAtIsNull(pageable);
                 };
-            return PageResponse.from(orders.map(OrderSummaryResponseDto::from));
+        return OrderListResponseDto.from(orders);
         }
 
     // ===== 보조 메서드 =====
