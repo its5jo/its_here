@@ -26,6 +26,7 @@ public enum ErrorCode {
     // category
     CATEGORY_NAME_DUPLICATE(HttpStatus.CONFLICT, "동일한 카테고리가 존재합니다.", "C-001"),
     CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "카테고리가 존재하지 않습니다.", "C-002"),
+    CATEGORY_INVALID_SORT_FIELD(HttpStatus.BAD_REQUEST, "카테고리 이름과 생성일시로만 정렬할 수 있습니다.", "C-003"),
 
     // area
     AREA_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 등록된 지역입니다.", "A-001"),
