@@ -49,8 +49,7 @@ public class CategoryService {
     public Page<CategoryGetAllResponseDto> getAllCategories(
             CategoryGetAllRequestDto requestDto, Pageable pageable
     ) {
-        Pageable newPageable = validatePageable(pageable);
-        return categoryRepository.getAllCategories(requestDto.name(), requestDto.hasHidden(), newPageable);
+        return categoryRepository.getAllCategories(requestDto.name(), requestDto.hasHidden(), pageable);
     }
 
     private void existsByNameAndDeletedAtIsNull(CategoryCreateRequestDto requestDto) {
@@ -64,17 +63,4 @@ public class CategoryService {
                 .orElseThrow(() -> new ItsHereException(ErrorCode.CATEGORY_NOT_FOUND));
     }
 
-    private Pageable validatePageable(Pageable pageable) {
-        int size = pageable.getPageSize();
-
-        if (size == 10 || size == 30 || size == 50) {
-            return pageable;
-        }
-
-        return PageRequest.of(
-                pageable.getPageNumber(),
-                10,
-                pageable.getSort()
-        );
-    }
 }

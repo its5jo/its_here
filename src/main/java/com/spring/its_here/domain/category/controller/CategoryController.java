@@ -7,10 +7,13 @@ import com.spring.its_here.domain.category.dto.response.CategoryGetAllPageRespon
 import com.spring.its_here.domain.category.dto.response.CategoryGetAllResponseDto;
 import com.spring.its_here.domain.category.dto.response.CategoryGetOneResponseDto;
 import com.spring.its_here.domain.category.service.CategoryService;
+import com.spring.its_here.global.advice.ErrorCode;
+import com.spring.its_here.global.advice.ItsHereException;
 import com.spring.its_here.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -18,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Set;
 import java.util.UUID;
 
 @RequestMapping("/api/categories")
@@ -53,11 +57,35 @@ public class CategoryController {
                     direction = Sort.Direction.DESC
             ) Pageable pageable
     ) {
-        Page<CategoryGetAllResponseDto> responseDtoList = categoryService.getAllCategories(requestDto, pageable);
+        Pageable validatedPageable = validatePageable(pageable);
+        Page<CategoryGetAllResponseDto> responseDtoList = categoryService.getAllCategories(requestDto, validatedPageable);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success("카테고리 목록 조회 성공"
                         , CategoryGetAllPageResponseDto.from(responseDtoList)));
+    }
+
+    private Pageable validatePageable(Pageable pageable) {
+        Set<String> availableSortFields = Set.of("createdAt", "name");
+
+        Sort sort = pageable.getSort();
+        for(Sort.Order order : sort){
+            String property = order.getProperty();
+            if (!availableSortFields.contains(property)) {
+                throw new ItsHereException(ErrorCode.CATEGORY_INVALID_SORT_FIELD);
+            }
+        }
+
+        int size = pageable.getPageSize();
+        if ((size == 10 || size == 30 || size == 50)) {
+            return pageable;
+        }
+
+        return PageRequest.of(
+                pageable.getPageNumber(),
+                10,
+                sort
+        );
     }
 
 }
