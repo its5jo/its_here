@@ -7,11 +7,7 @@ import com.spring.its_here.domain.order.repository.OrderRepository;
 import com.spring.its_here.domain.review.dto.request.ReviewCreateRequestDto;
 import com.spring.its_here.domain.review.dto.request.ReviewGetAllRequestDto;
 import com.spring.its_here.domain.review.dto.request.ReviewUpdateRequestDto;
-import com.spring.its_here.domain.review.dto.response.ReviewCreateResponseDto;
-import com.spring.its_here.domain.review.dto.response.ReviewGetAllItemsResponseDto;
-import com.spring.its_here.domain.review.dto.response.ReviewGetAllResponseDto;
-import com.spring.its_here.domain.review.dto.response.ReviewGetOneResponseDto;
-import com.spring.its_here.domain.review.dto.response.ReviewUpdateResponseDto;
+import com.spring.its_here.domain.review.dto.response.*;
 import com.spring.its_here.domain.review.entity.Review;
 import com.spring.its_here.domain.review.repository.ReviewRepository;
 import com.spring.its_here.domain.store.entity.Store;
@@ -24,15 +20,15 @@ import com.spring.its_here.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.UUID;
-
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -53,7 +49,7 @@ public class ReviewService {
                 .orElseThrow(() -> new ItsHereException(ErrorCode.ORDER_NOT_FOUND));
 
         if (!order.getUserId().equals(user.getId())) {
-            throw new ItsHereException(ErrorCode.REVIEW_FORBIDDEN);
+            throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
         }
 
         if (order.getStatus() != OrderStatus.COMPLETED) {
@@ -64,7 +60,7 @@ public class ReviewService {
             throw new ItsHereException(ErrorCode.REVIEW_ALREADY_EXISTS);
         }
 
-        Store store = storeRepository.findById(order.getStoreId())
+        Store store = storeRepository.findByIdAndDeletedAtIsNull(order.getStoreId())
                 .orElseThrow(() -> new ItsHereException(ErrorCode.STORE_NOT_FOUND));
 
         Review reviewCreate = Review.savedReview(
@@ -76,13 +72,11 @@ public class ReviewService {
         );
 
         Review reviewSave = reviewRepository.save(reviewCreate);
-        store.accumulateReview(reviewCreateRequestDto.rating());
 
-        // TODO : 가게 평점 합계 & 리뷰 개수
-//        storeRepository.addReview(
-//                store.getId(),
-//                reviewCreateRequestDto.rating()
-//        );
+        storeRepository.addReview(
+                store.getId(),
+                reviewCreateRequestDto.rating()
+        );
 
         return new ReviewCreateResponseDto(
                 reviewSave.getId(),
@@ -137,7 +131,6 @@ public class ReviewService {
         );
     }
 
-    // TODO : update 주석 삭제
     @PreAuthorize("hasAuthority('CUSTOMER')")
     @Transactional
     public ReviewUpdateResponseDto updateReview(
@@ -154,16 +147,23 @@ public class ReviewService {
                 review
         );
 
+        Double oldRating = review.getRating();
+
         review.updateReview(
                 reviewUpdateRequestDto.rating(),
                 reviewUpdateRequestDto.content()
         );
-        // TODO : 가게 평점 합계 & 리뷰 개수
-//        storeRepository.modifyReviewRating(
-//                review.getStore().getId(),
-//                oldRating,
-//                request.rating()
-//        );
+        try {
+            reviewRepository.flush();
+        } catch (ObjectOptimisticLockingFailureException e) {
+            // ObjectOptimisticLockingFailureException : 내가 읽었던 리뷰가 그 사이 다른 요청에 의해 바뀌었다
+            throw new ItsHereException(ErrorCode.REVIEW_CONFLICT);
+        }
+        storeRepository.modifyReviewRating(
+                review.getStore().getId(),
+                oldRating,
+                reviewUpdateRequestDto.rating()
+        );
 
         return ReviewUpdateResponseDto.from(review.getId());
     }
@@ -186,8 +186,7 @@ public class ReviewService {
             Review review
     ) {
         if (!review.getUser().getId().equals(user.getId())) {
-            // TODO : ErrorCode 변경 -> FORBIDDEN
-            throw new ItsHereException(ErrorCode.REVIEW_NOT_FOUND);
+            throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
         }
     }
 
