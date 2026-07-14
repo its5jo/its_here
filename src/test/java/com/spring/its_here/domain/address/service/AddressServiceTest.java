@@ -2,6 +2,7 @@ package com.spring.its_here.domain.address.service;
 
 import com.spring.its_here.domain.address.dto.request.AddressCreateRequestDto;
 import com.spring.its_here.domain.address.dto.request.AddressUpdateRequestDto;
+import com.spring.its_here.domain.address.dto.response.AddressGetResponseDto;
 import com.spring.its_here.domain.address.dto.response.AddressResponseDto;
 import com.spring.its_here.domain.address.entity.Address;
 import com.spring.its_here.domain.address.repository.AddressRepository;
@@ -570,6 +571,176 @@ class AddressServiceTest {
             ItsHereException exception = assertThrows(
                     ItsHereException.class,
                     () -> addressService.delete(addressId)
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.USER_NOT_FOUND);
+
+            verify(authenticationFacade).getCurrentUserId();
+            verify(userRepository).findByIdAndHasDeletedFalse(1L);
+
+            verify(addressRepository, never())
+                    .findByIdAndDeletedAtNull(any(UUID.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("주소 단건 조회 API 테스트")
+    class GetTest {
+        @Test
+        @DisplayName("주소 단건 조회 성공")
+        void get_success() {
+            // given
+            UUID addressId = UUID.randomUUID();
+
+            UserEntity user = UserEntity.create(
+                    "test",
+                    "encodedPassword",
+                    "테스터",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            Address address = Address.create(
+                    "서울특별시 강남구",
+                    user
+            );
+
+            ReflectionTestUtils.setField(address, "id", addressId);
+
+            when(authenticationFacade.getCurrentUserId())
+                    .thenReturn(1L);
+
+            when(userRepository.findByIdAndHasDeletedFalse(1L))
+                    .thenReturn(Optional.of(user));
+
+            when(addressRepository.findByIdAndDeletedAtNull(addressId))
+                    .thenReturn(Optional.of(address));
+
+            // when
+            AddressGetResponseDto response = addressService.get(addressId);
+
+            // then
+            assertThat(response.addressId()).isEqualTo(addressId);
+            assertThat(response.address()).isEqualTo("서울특별시 강남구");
+
+            verify(authenticationFacade).getCurrentUserId();
+            verify(userRepository).findByIdAndHasDeletedFalse(1L);
+            verify(addressRepository).findByIdAndDeletedAtNull(addressId);
+        }
+
+        @Test
+        @DisplayName("주소 단건 조회 실패 - 주소가 존재하지 않음")
+        void get_fail_addressNotFound() {
+            // given
+            UUID addressId = UUID.randomUUID();
+
+            UserEntity user = UserEntity.create(
+                    "test",
+                    "encodedPassword",
+                    "테스터",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            when(authenticationFacade.getCurrentUserId())
+                    .thenReturn(1L);
+
+            when(userRepository.findByIdAndHasDeletedFalse(1L))
+                    .thenReturn(Optional.of(user));
+
+            when(addressRepository.findByIdAndDeletedAtNull(addressId))
+                    .thenReturn(Optional.empty());
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> addressService.get(addressId)
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.ADDRESS_NOT_FOUND);
+
+            verify(authenticationFacade).getCurrentUserId();
+            verify(userRepository).findByIdAndHasDeletedFalse(1L);
+            verify(addressRepository).findByIdAndDeletedAtNull(addressId);
+        }
+
+        @Test
+        @DisplayName("주소 단건 조회 실패 - 본인의 주소가 아님")
+        void get_fail_forbidden() {
+            // given
+            UUID addressId = UUID.randomUUID();
+
+            UserEntity currentUser = UserEntity.create(
+                    "current",
+                    "encodedPassword",
+                    "현재사용자",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(currentUser, "id", 1L);
+
+            UserEntity otherUser = UserEntity.create(
+                    "other",
+                    "encodedPassword",
+                    "다른사용자",
+                    UserRole.CUSTOMER
+            );
+
+            ReflectionTestUtils.setField(otherUser, "id", 2L);
+
+            Address address = Address.create(
+                    "서울특별시 강남구",
+                    otherUser
+            );
+
+            ReflectionTestUtils.setField(address, "id", addressId);
+
+            when(authenticationFacade.getCurrentUserId())
+                    .thenReturn(1L);
+
+            when(userRepository.findByIdAndHasDeletedFalse(1L))
+                    .thenReturn(Optional.of(currentUser));
+
+            when(addressRepository.findByIdAndDeletedAtNull(addressId))
+                    .thenReturn(Optional.of(address));
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> addressService.get(addressId)
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.AUTH_FORBIDDEN);
+
+            verify(authenticationFacade).getCurrentUserId();
+            verify(userRepository).findByIdAndHasDeletedFalse(1L);
+            verify(addressRepository).findByIdAndDeletedAtNull(addressId);
+        }
+
+        @Test
+        @DisplayName("주소 단건 조회 실패 - 사용자가 존재하지 않음")
+        void get_fail_userNotFound() {
+            // given
+            UUID addressId = UUID.randomUUID();
+
+            when(authenticationFacade.getCurrentUserId())
+                    .thenReturn(1L);
+
+            when(userRepository.findByIdAndHasDeletedFalse(1L))
+                    .thenReturn(Optional.empty());
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> addressService.get(addressId)
             );
 
             // then
