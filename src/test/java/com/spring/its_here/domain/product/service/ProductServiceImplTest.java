@@ -82,6 +82,7 @@ class ProductServiceImplTest {
                     "고소한 커피",
                     4_000,
                     false,
+                    false,
                     null
             );
 
@@ -136,6 +137,7 @@ class ProductServiceImplTest {
                     "아메리카노",
                     "고소한 커피",
                     4000,
+                    false,
                     false,
                     null
             );
