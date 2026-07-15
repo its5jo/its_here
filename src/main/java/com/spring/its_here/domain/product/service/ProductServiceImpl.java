@@ -1,6 +1,5 @@
 package com.spring.its_here.domain.product.service;
 
-import com.spring.its_here.domain.aihistory.entity.AiHistory;
 import com.spring.its_here.domain.aihistory.repository.AiHistoryRepository;
 import com.spring.its_here.domain.product.dto.command.ProductCreateCommand;
 import com.spring.its_here.domain.product.dto.command.ProductUpdateCommand;
@@ -43,9 +42,9 @@ public class ProductServiceImpl implements ProductService {
     private final AiClient aiClient;
     private final ProductDescriptionPromptGenerator productDescriptionPromptGenerator;
     private final AiHistoryRepository aiHistoryRepository;
+    private final ProductWriter productWriter;
 
     @Override
-    @Transactional
     public ProductCreateResponseDto createProduct(ProductCreateCommand productCreateCommand, Long loginUserId) {
         UserEntity user = userRepository.findById(loginUserId).orElseThrow(() -> new ItsHereException(ErrorCode.USER_NOT_FOUND));
 
@@ -61,12 +60,6 @@ public class ProductServiceImpl implements ProductService {
             throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
         }
 
-        String imagePath = null;
-        if (productCreateCommand.image() != null) {
-            imagePath = imageStorage.store(productCreateCommand.image());
-            log.debug("상품 이미지 생성 성공. path={}", imagePath);
-        }
-
         String description = productCreateCommand.description();
         String aiResponse = null;
         Prompt prompt = null;
@@ -77,36 +70,34 @@ public class ProductServiceImpl implements ProductService {
                     productCreateCommand.name(),
                     productCreateCommand.price()
             );
+            long aiStartedAt = System.nanoTime();
             aiResponse = aiClient.generateDescription(prompt);
+            long aiElapsedMs =
+                    (System.nanoTime() - aiStartedAt) / 1_000_000;
+            log.info(
+                    "Gemini 상품 설명 생성 시간. elapsedMs={}, storeId={}, userId={}",
+                    aiElapsedMs,
+                    productCreateCommand.storeId(),
+                    loginUserId
+            );
             description = aiResponse;
         }
 
-        Product product = Product.create(
-                productCreateCommand.name(),
-                description,
-                productCreateCommand.hasHidden(),
-                productCreateCommand.price(),
-                imagePath,
-                store
-        );
-
-        Product saved = productRepository.save(product);
-        log.info("상품 생성 완료. productId={}, storeId={}, userId={}", saved.getId(), store.getId(), loginUserId);
-
-        if (aiResponse != null) {
-            AiHistory savedAiHistory = aiHistoryRepository.save(
-                    AiHistory.create(saved, prompt.serialize(), aiResponse)
-            );
-            log.info(
-                    "상품 설명 AI 생성 및 이력 저장 완료. aiHistoryId={}, productId={}, storeId={}, userId={}",
-                    savedAiHistory.getId(),
-                    saved.getId(),
-                    store.getId(),
-                    loginUserId
-            );
+        String imagePath = null;
+        if (productCreateCommand.image() != null) {
+            imagePath = imageStorage.store(productCreateCommand.image());
+            log.debug("상품 이미지 생성 성공. path={}", imagePath);
         }
 
-        return new ProductCreateResponseDto(saved.getId());
+        return productWriter.save(
+                productCreateCommand,
+                loginUserId,
+                description,
+                imagePath,
+                prompt,
+                aiResponse
+        );
+
     }
 
     @Override
