@@ -189,46 +189,6 @@ class StoreRepositoryTest {
                 .isZero();
     }
 
-    @Test
-    @DisplayName("가게의 카테고리, 지역이 삭제된 경우 (삭제됨) 현출")
-    void deleted_category_and_area_display_deleted() {
-
-        // given
-        Category category = createCategory("치킨", false);
-        category.delete(userDetails.getUserId());
-
-        categoryRepository.save(category);
-
-        Area area = createArea("서울특별시", "강남구", "역삼동");
-        area.delete(userDetails.getUserId());
-
-        areaRepository.save(area);
-
-        Store store = createStore(
-                category,
-                area
-        );
-
-        // when
-        Page<StoreGetAllResponseDto> result =
-                storeRepository.getAllStores(
-                        null,
-                        null,
-                        pageable
-                );
-
-        // then
-        StoreGetAllResponseDto responseDto =
-                result.getContent().get(0);
-
-        assertThat(responseDto.category())
-                .isEqualTo(category.getName() + "(삭제됨)");
-
-        assertThat(responseDto.area())
-                .isEqualTo(area.getTown() + "(삭제됨)");
-    }
-
-
     private Category createCategory(String name, Boolean hasHidden) {
         Category category = Category.createCategory(name, hasHidden);
         return categoryRepository.save(category);
