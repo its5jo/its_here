@@ -21,7 +21,8 @@ spring:
       genai:
         api-key: ${GEMINI_API_KEY}
         chat:
-          model: gemini-2.5-flash
+          options:
+            model: gemini-3.5-flash
 
 logging:
   level:
