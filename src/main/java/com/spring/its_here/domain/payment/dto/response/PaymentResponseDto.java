@@ -14,8 +14,7 @@ public record PaymentResponseDto(
         int originalAmount,
         PaymentMethod method,
         PaymentStatus status,
-        Instant approvedAt,
-        Instant createdAt
+        Instant approvedAt
 ) {
     public static PaymentResponseDto from(Payment payment) {
         return new PaymentResponseDto(
@@ -25,8 +24,7 @@ public record PaymentResponseDto(
                 payment.getOriginalAmount(),
                 payment.getMethod(),
                 payment.getStatus(),
-                payment.getApprovedAt(),
-                payment.getCreatedAt()
+                payment.getApprovedAt()
         );
     }
 }
