@@ -7,6 +7,9 @@ import com.spring.its_here.domain.aihistory.dto.response.AiHistoryResponseDto;
 import com.spring.its_here.domain.aihistory.entity.AiHistory;
 import com.spring.its_here.domain.aihistory.repository.AiHistoryRepository;
 import com.spring.its_here.domain.product.repository.ProductRepository;
+import com.spring.its_here.domain.user.entity.UserEntity;
+import com.spring.its_here.domain.user.enums.UserRole;
+import com.spring.its_here.domain.user.repository.UserRepository;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
 import lombok.RequiredArgsConstructor;
@@ -28,27 +31,35 @@ public class AiHistoryServiceImpl implements AiHistoryService {
 
     private final AiHistoryRepository aiHistoryRepository;
     private final ProductRepository productRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional(readOnly = true)
-    public AiHistoryResponseDto getAiHistory(UUID aiHistoryId) {
-        AiHistory aiHistory = aiHistoryRepository.findById(aiHistoryId).orElseThrow(() -> new ItsHereException(ErrorCode.AI_HISTORY_NOT_FOUND));
+    public AiHistoryResponseDto getAiHistory(UUID aiHistoryId, Long loginUserId) {
+        validateManagerOrMaster(loginUserId);
+
+        AiHistory aiHistory = aiHistoryRepository.findById(aiHistoryId)
+                .orElseThrow(() -> new ItsHereException(ErrorCode.AI_HISTORY_NOT_FOUND));
         return AiHistoryResponseDto.from(aiHistory);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<AiHistoryResponseDto> getAiHistories() {
-        List<AiHistory> all = aiHistoryRepository.findAllWithProduct();
-        return all.stream().map(AiHistoryResponseDto::from).toList();
+    public List<AiHistoryResponseDto> getAiHistories(Long loginUserId) {
+        validateManagerOrMaster(loginUserId);
+        List<AiHistory> aiHistories = aiHistoryRepository.findAllWithProduct();
+        return aiHistories.stream().map(AiHistoryResponseDto::from).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public AiHistoryCursorResponseDto searchAiHistories(
             AiHistorySearchCondition condition,
-            UUID productId
+            UUID productId,
+            Long loginUserId
     ) {
+        validateManagerOrMaster(loginUserId);
+
         log.debug(
                 "AI 이력 목록 조회 요청. productId={}, cursor={}, idAfter={}, sortBy={}, sortDirection={}, limit={}",
                 productId,
@@ -109,6 +120,17 @@ public class AiHistoryServiceImpl implements AiHistoryService {
                 .and(Sort.by(direction, "id"));
 
         return PageRequest.of(0, condition.limit(), sort);
+    }
+
+    private void validateManagerOrMaster(Long loginUserId) {
+        UserEntity user = userRepository.findById(loginUserId)
+                .orElseThrow(() -> new ItsHereException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getRole() != UserRole.MANAGER
+                && user.getRole() != UserRole.MASTER) {
+            log.warn("ai 기록 조회 권한 없음. userId={}, role={}", loginUserId, user.getRole());
+            throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
+        }
     }
 
 }

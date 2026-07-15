@@ -8,10 +8,10 @@ import java.util.List;
 import java.util.UUID;
 
 public interface AiHistoryService {
-    AiHistoryResponseDto getAiHistory(UUID aiHistoryId);
+    AiHistoryResponseDto getAiHistory(UUID aiHistoryId, Long loginUserId);
 
-    List<AiHistoryResponseDto> getAiHistories();
+    List<AiHistoryResponseDto> getAiHistories(Long loginUserId);
 
-    AiHistoryCursorResponseDto searchAiHistories(AiHistorySearchCondition condition, UUID productId);
+    AiHistoryCursorResponseDto searchAiHistories(AiHistorySearchCondition condition, UUID productId, Long loginUserId);
 
 }
