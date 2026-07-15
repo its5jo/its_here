@@ -40,6 +40,11 @@ public class Review extends BaseDeletableEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private UserEntity user;
 
+    // Version 덕분에 Hibernate가 이 필드를 동시성 검사 전용 컬럼으로 취급해서 자동으로 UPDATE를 날리는 것
+    @Version
+    @Column(nullable = false)
+    private Long version;
+
     public static Review savedReview(
             double rating,
             String content,
@@ -54,5 +59,13 @@ public class Review extends BaseDeletableEntity {
         review.store = store;
         review.order = order;
         return review;
+    }
+
+    public void updateReview(
+            double rating,
+            String content
+    ) {
+        this.rating = rating;
+        this.content = content;
     }
 }
