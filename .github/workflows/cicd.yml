@@ -1,0 +1,131 @@
+name: CI/CD
+
+on:
+
+  # CI
+  pull_request:
+    branches:
+      - develop
+      - main
+
+  # CD
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+
+  # CI
+  test:
+    name: Build & Test
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Wrapper Validation
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Gradle Permission
+        run: chmod +x gradlew
+
+      - name: Build & Test
+        env:
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          JWT_ACCESSTOKEN_EXPIRATION: ${{ secrets.JWT_ACCESSTOKEN_EXPIRATION }}
+          JWT_REFRESHTOKEN_EXPIRATION: ${{ secrets.JWT_REFRESHTOKEN_EXPIRATION }}
+
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+        run: ./gradlew build --no-daemon
+
+      - name: Upload Test Report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: build/reports/tests/
+
+  # CD
+  deploy:
+    name: Deploy
+
+    # 테스트 성공해야만 실행
+    needs: test
+
+    # push(main)일 때만 실행
+    if: github.event_name == 'push'
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Java17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - name: chmod
+        run: chmod +x gradlew
+
+      - name: Build Jar
+        run: ./gradlew bootJar
+
+      - name: Rename Jar
+        run: cp build/libs/*.jar app.jar
+
+      - name: Create .env
+        run: |
+          echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}" >> .env
+          echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> .env
+          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+          
+          echo "DB_URL=jdbc:postgresql://postgres:5432/${{ secrets.POSTGRES_DB }}" >> .env
+          echo "DB_USERNAME=${{ secrets.POSTGRES_USER }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+          
+          echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> .env
+          echo "JWT_ACCESSTOKEN_EXPIRATION=${{ secrets.JWT_ACCESSTOKEN_EXPIRATION }}" >> .env
+          echo "JWT_REFRESHTOKEN_EXPIRATION=${{ secrets.JWT_REFRESHTOKEN_EXPIRATION }}" >> .env
+          
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+
+      - name: SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+
+          source: "app.jar,Dockerfile,docker-compose.yml,deploy.sh,.env,nginx/nginx.conf"
+
+          target: /home/ubuntu/project
+
+      - name: Deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+
+          script: |
+            cd /home/ubuntu/project
+            chmod +x deploy.sh
+            ./deploy.sh
