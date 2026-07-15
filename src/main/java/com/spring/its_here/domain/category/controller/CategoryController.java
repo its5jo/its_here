@@ -1,5 +1,6 @@
 package com.spring.its_here.domain.category.controller;
 
+import com.spring.its_here.domain.category.controller.docs.CategoryApi;
 import com.spring.its_here.domain.category.dto.request.CategoryCreateRequestDto;
 import com.spring.its_here.domain.category.dto.request.CategoryGetAllRequestDto;
 import com.spring.its_here.domain.category.dto.request.CategoryUpdateRequestDto;
@@ -27,7 +28,7 @@ import java.util.UUID;
 @RequestMapping("/api/categories")
 @RestController
 @RequiredArgsConstructor
-public class CategoryController {
+public class CategoryController implements CategoryApi {
 
     private final CategoryService categoryService;
 
@@ -75,7 +76,7 @@ public class CategoryController {
     }
 
     @DeleteMapping("/{categoryId}")
-    public ResponseEntity<ApiResponse<Void>> deleteCategory(
+    public ResponseEntity<Void> deleteCategory(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID categoryId) {
         categoryService.deleteCategory(userDetails, categoryId);
