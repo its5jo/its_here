@@ -2,6 +2,7 @@ package com.spring.its_here.domain.aihistory.controller;
 
 import com.spring.its_here.domain.aihistory.controller.docs.AiHistoryApi;
 import com.spring.its_here.domain.aihistory.dto.request.AiHistorySearchCondition;
+import com.spring.its_here.domain.aihistory.dto.response.AiHistoryResponseDto;
 import com.spring.its_here.domain.aihistory.service.AiHistoryService;
 import com.spring.its_here.global.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -23,10 +24,11 @@ public class AiHistoryController implements AiHistoryApi {
 
 
     @GetMapping("/ai-histories/{aiHistoryId}")
-    public ResponseEntity<ApiResponse<Void>> getAiHistory(
+    public ResponseEntity<ApiResponse<AiHistoryResponseDto>> getAiHistory(
             @PathVariable UUID aiHistoryId
     ) {
-        return ResponseEntity.ok().body(ApiResponse.success("AI 기록 단일 조회 성공", null));
+        AiHistoryResponseDto aiHistoryResponse = aiHistoryService.getAiHistory(aiHistoryId);
+        return ResponseEntity.ok().body(ApiResponse.success("AI 기록 단일 조회 성공", aiHistoryResponse));
     }
 
     @GetMapping("/ai-histories")
