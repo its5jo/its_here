@@ -104,7 +104,7 @@ public class StoreRepositoryImpl implements StoreRepositoryCustom {
 
         // 입력된 카테고리가 삭제되거나 숨겨진 경우 조회 결과 없음
         return QCategory.category.name.eq(category)
-                .and(QCategory.category.hasHidden.isTrue())
+                .and(QCategory.category.hasHidden.isFalse())
                 .and(QCategory.category.deletedAt.isNull());
     }
 
@@ -115,7 +115,7 @@ public class StoreRepositoryImpl implements StoreRepositoryCustom {
 
         // 입력된 지역이 삭제되거나 사용 불가능한 경우 조회 결과 없음
         return QArea.area.town.eq(town)
-                .and(QArea.area.hasAvailable.isFalse())
+                .and(QArea.area.hasAvailable.isTrue())
                 .and(QArea.area.deletedAt.isNull());
     }
 
