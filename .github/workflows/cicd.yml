@@ -11,7 +11,7 @@ on:
   # CD
   push:
     branches:
-      - develop # 개발 중이므로 추가(삭제 예정)
+      - feat/85-cicd # 최초 테스트 후 삭제 예정
       - main
 
 permissions:
