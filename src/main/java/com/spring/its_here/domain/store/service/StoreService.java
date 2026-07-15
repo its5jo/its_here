@@ -43,6 +43,11 @@ public class StoreService {
         validateStoreCreate(userDetails, requestDto);
 
         Category category = findCategoryByIdAndNotDeleted(requestDto.categoryId());
+
+        if(category.isHasHidden()){
+            throw new ItsHereException(ErrorCode.CATEGORY_HIDDEN);
+        }
+
         Area area = findAreaByIdAndNotDeleted(requestDto.areaId());
 
         Store store = Store.createStore(requestDto.name(), requestDto.address(),
@@ -85,6 +90,10 @@ public class StoreService {
         validateStoreOwner(userDetails, store.getUser().getId());
 
         Category category = findCategoryByIdAndNotDeleted(requestDto.categoryId());
+
+        if(category.isHasHidden()){
+            throw new ItsHereException(ErrorCode.CATEGORY_HIDDEN);
+        }
 
         Area area = findAreaByIdAndNotDeleted(requestDto.areaId());
 
