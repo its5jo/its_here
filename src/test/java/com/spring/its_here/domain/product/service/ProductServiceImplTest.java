@@ -23,7 +23,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -55,6 +54,9 @@ class ProductServiceImplTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private ProductWriter productWriter;
+
     @InjectMocks
     private ProductServiceImpl productService;
 
@@ -66,15 +68,13 @@ class ProductServiceImplTest {
         @Test
         @DisplayName("가게 소유자인 OWNER는 상품을 생성할 수 있다")
         void createProduct_success() {
-
             // given
             Long loginUserId = 1L;
             UUID storeId = UUID.randomUUID();
             UUID productId = UUID.randomUUID();
-            UserEntity user = mock(UserEntity.class);
 
+            UserEntity user = mock(UserEntity.class);
             Store store = mock(Store.class);
-            Product savedProduct = mock(Product.class);
 
             ProductCreateCommand command = new ProductCreateCommand(
                     storeId,
@@ -88,16 +88,24 @@ class ProductServiceImplTest {
 
             when(userRepository.findById(loginUserId))
                     .thenReturn(Optional.of(user));
-            when(user.getRole()).thenReturn(UserRole.OWNER);
+            when(user.getRole())
+                    .thenReturn(UserRole.OWNER);
 
             when(storeRepository.findById(storeId))
                     .thenReturn(Optional.of(store));
-            when(store.getUser()).thenReturn(user);
-            when(user.getId()).thenReturn(loginUserId);
-            when(store.getId()).thenReturn(storeId);
-            when(productRepository.save(any(Product.class)))
-                    .thenReturn(savedProduct);
-            when(savedProduct.getId()).thenReturn(productId);
+            when(store.getUser())
+                    .thenReturn(user);
+            when(user.getId())
+                    .thenReturn(loginUserId);
+
+            when(productWriter.save(
+                    eq(command),
+                    eq(loginUserId),
+                    eq("고소한 커피"),
+                    isNull(),
+                    isNull(),
+                    isNull()
+            )).thenReturn(new ProductCreateResponseDto(productId));
 
             // when
             ProductCreateResponseDto response =
@@ -106,23 +114,20 @@ class ProductServiceImplTest {
             // then
             assertThat(response.productId()).isEqualTo(productId);
 
-            ArgumentCaptor<Product> captor =
-                    ArgumentCaptor.forClass(Product.class);
-
-            verify(productRepository).save(captor.capture());
-
-            Product product = captor.getValue();
-
-            assertThat(product.getName()).isEqualTo("아메리카노");
-            assertThat(product.getDescription()).isEqualTo("고소한 커피");
-            assertThat(product.getPrice()).isEqualTo(4000);
-            assertThat(product.isHasHidden()).isFalse();
-            assertThat(product.getImageUrl()).isNull();
-            assertThat(product.getStore()).isSameAs(store);
-
             verify(userRepository).findById(loginUserId);
             verify(storeRepository).findById(storeId);
+
+            verify(productWriter).save(
+                    eq(command),
+                    eq(loginUserId),
+                    eq("고소한 커피"),
+                    isNull(),
+                    isNull(),
+                    isNull()
+            );
+
             verify(imageStorage, never()).store(any());
+//            verify(aiClient, never()).generateDescription(any());
         }
 
         @Test
