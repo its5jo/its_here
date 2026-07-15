@@ -8,7 +8,6 @@ public record Prompt(
         return """
                 [SYSTEM]
                 %s
-                
                 [USER]
                 %s
                 """.formatted(system, user);
