@@ -646,19 +646,20 @@ class StoreServiceTest {
             when(storeRepository.getAllStores(
                     "교촌치킨",
                     "치킨",
+                    "양재동",
                     pageable
             )).thenReturn(page);
 
             // when
             Page<StoreGetAllResponseDto> result =
-                    storeService.getAllStores("교촌치킨", "치킨", pageable);
+                    storeService.getAllStores("교촌치킨", "치킨", "양재동", pageable);
 
             // then
             assertThat(result).isEqualTo(page);
             assertThat(result.getContent().get(0).categoryHasHidden()).isEqualTo(dto1.categoryHasHidden());
 
             verify(storeRepository)
-                    .getAllStores("교촌치킨", "치킨", pageable);
+                    .getAllStores("교촌치킨", "치킨", "양재동", pageable);
         }
 
         @Test
@@ -677,11 +678,12 @@ class StoreServiceTest {
             when(storeRepository.getAllStores(
                     any(),
                     any(),
+                    any(),
                     any(Pageable.class)
             )).thenReturn(Page.empty());
 
             // when
-            storeService.getAllStores("교촌치킨","치킨", pageable);
+            storeService.getAllStores("교촌치킨","치킨", "양재동", pageable);
 
             // then
             ArgumentCaptor<Pageable> captor =
@@ -691,6 +693,7 @@ class StoreServiceTest {
                     .getAllStores(
                             eq("교촌치킨"),
                             eq("치킨"),
+                            eq("양재동"),
                             captor.capture()
                     );
 
@@ -711,10 +714,11 @@ class StoreServiceTest {
             when(storeRepository.getAllStores(
                     any(),
                     any(),
+                    any(),
                     any(Pageable.class)
             )).thenReturn(Page.empty());
 
-            storeService.getAllStores("교촌치킨","치킨", pageable);
+            storeService.getAllStores("교촌치킨","치킨", "양재동", pageable);
 
             ArgumentCaptor<Pageable> captor =
                     ArgumentCaptor.forClass(Pageable.class);
@@ -723,6 +727,7 @@ class StoreServiceTest {
                     .getAllStores(
                             eq("교촌치킨"),
                             eq("치킨"),
+                            eq("양재동"),
                             captor.capture()
                     );
 

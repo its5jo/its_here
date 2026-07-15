@@ -387,7 +387,7 @@ class StoreControllerTest {
                             1
                     );
 
-            given(storeService.getAllStores(any(), any(), any()))
+            given(storeService.getAllStores(any(), any(), any(), any()))
                     .willReturn(page);
 
             // when & then

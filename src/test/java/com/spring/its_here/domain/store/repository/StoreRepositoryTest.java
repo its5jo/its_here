@@ -110,6 +110,44 @@ class StoreRepositoryTest {
                 storeRepository.getAllStores(
                         null,
                         null,
+                        null,
+                        pageable
+                );
+
+        // then
+        assertThat(result.getTotalElements())
+                .isEqualTo(1);
+
+        StoreGetAllResponseDto responseDto =
+                result.getContent().get(0);
+
+        assertThat(responseDto.name())
+                .isEqualTo(store.getName());
+
+        assertThat(responseDto.category())
+                .isEqualTo(category.getName());
+
+        assertThat(responseDto.area())
+                .isEqualTo(area.getTown());
+    }
+
+    @Test
+    @DisplayName("지역명으로 가게 목록 조회 성공")
+    void get_all_stores_by_area() {
+
+        // given
+        Category category = createCategory("양식" , false);
+
+        Area area = createArea("서울특별시", "강남구", "역삼동");
+
+        Store store = createStore(category, area);
+
+        // when
+        Page<StoreGetAllResponseDto> result =
+                storeRepository.getAllStores(
+                        null,
+                        null,
+                        "역삼동",
                         pageable
                 );
 
@@ -151,6 +189,7 @@ class StoreRepositoryTest {
                 storeRepository.getAllStores(
                         null,
                         null,
+                        null,
                         pageable
                 );
 
@@ -181,6 +220,7 @@ class StoreRepositoryTest {
                 storeRepository.getAllStores(
                         null,
                         "양식",
+                        "양재동",
                         pageable
                 );
 
@@ -205,6 +245,18 @@ class StoreRepositoryTest {
     ) {
 
         Store store = Store.createStore("을지다락 강남점", "서울특별시 강남구 강남대로96길 22",
+                userDetails.getUser(), category, area,
+                true, LocalTime.of(9, 0), LocalTime.of(22, 0));
+
+        return storeRepository.save(store);
+    }
+
+    private Store createStore1(
+            Category category,
+            Area area
+    ) {
+
+        Store store = Store.createStore("행복식당", "서울특별시 강남구 강남대로96길 22",
                 userDetails.getUser(), category, area,
                 true, LocalTime.of(9, 0), LocalTime.of(22, 0));
 
