@@ -18,6 +18,8 @@ public interface CategoryRepository extends JpaRepository<Category, UUID> {
 
     Optional<Category> findByIdAndDeletedAtIsNull(UUID categoryId);
 
+    boolean existsByNameAndIdNotAndDeletedAtIsNull(String name, UUID categoryId);
+
     @Query("""
         SELECT new com.spring.its_here.domain.category.dto.response.CategoryGetAllResponseDto(
                         c.id,
@@ -35,4 +37,5 @@ public interface CategoryRepository extends JpaRepository<Category, UUID> {
             @Param("hasHidden") Boolean hasHidden,
             Pageable pageable
     );
+
 }
