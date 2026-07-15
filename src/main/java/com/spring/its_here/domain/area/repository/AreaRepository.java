@@ -17,15 +17,22 @@ public interface AreaRepository extends JpaRepository<Area, UUID> {
             String town
     );
 
+    boolean existsByCityAndDistrictAndTownAndIdNot(
+            String city,
+            String district,
+            String town,
+            UUID areaId
+    );
+
     @Query("""
-        SELECT a
-        FROM Area a
-        WHERE a.deletedAt IS NULL
-        AND (:city IS NULL OR a.city = :city)
-        AND (:district IS NULL OR a.district = :district)
-        AND (:town IS NULL OR a.town = :town)
-        AND (:hasAvailable IS NULL OR a.hasAvailable = :hasAvailable)
-""")
+                    SELECT a
+                    FROM Area a
+                    WHERE a.deletedAt IS NULL
+                    AND (:city IS NULL OR a.city = :city)
+                    AND (:district IS NULL OR a.district = :district)
+                    AND (:town IS NULL OR a.town = :town)
+                    AND (:hasAvailable IS NULL OR a.hasAvailable = :hasAvailable)
+            """)
     Page<Area> searchAreas(
             @Param("city") String city,
             @Param("district") String district,
