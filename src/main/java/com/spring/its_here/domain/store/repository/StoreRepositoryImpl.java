@@ -30,7 +30,8 @@ public class StoreRepositoryImpl implements StoreRepositoryCustom {
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public Page<StoreGetAllResponseDto> getAllStores(String name, String category, Pageable pageable) {
+    public Page<StoreGetAllResponseDto> getAllStores(
+            String name, String category, String town, Pageable pageable) {
 
         QStore qStore = QStore.store;
         QCategory qCategory = QCategory.category;
@@ -46,7 +47,6 @@ public class StoreRepositoryImpl implements StoreRepositoryCustom {
                         )
                 );
 
-        // 카테고리 및 가게 이름으로 페이지에 맞는 가게 목록 조회
         List<StoreGetAllResponseDto> result = queryFactory
                 .select(Projections.constructor(
                         StoreGetAllResponseDto.class,
@@ -65,6 +65,7 @@ public class StoreRepositoryImpl implements StoreRepositoryCustom {
                 .where(
                         storeNameContains(name),
                         categoryNameEqual(category),
+                        townNameEqual(town),
                         qStore.deletedAt.isNull()
                 )
                 .offset(pageable.getOffset())
@@ -78,9 +79,11 @@ public class StoreRepositoryImpl implements StoreRepositoryCustom {
                 .select(qStore.count())
                 .from(qStore)
                 .leftJoin(qStore.category, qCategory)
+                .leftJoin(qStore.area, qArea)
                 .where(
                         storeNameContains(name),
                         categoryNameEqual(category),
+                        townNameEqual(town),
                         qStore.deletedAt.isNull()
                 )
                 .fetchOne()
@@ -101,8 +104,19 @@ public class StoreRepositoryImpl implements StoreRepositoryCustom {
 
         // 입력된 카테고리가 삭제되거나 숨겨진 경우 조회 결과 없음
         return QCategory.category.name.eq(category)
-                .and(QCategory.category.hasHidden.isFalse())
+                .and(QCategory.category.hasHidden.isTrue())
                 .and(QCategory.category.deletedAt.isNull());
+    }
+
+    private BooleanExpression townNameEqual(String town) {
+        if (!StringUtils.hasText(town)) {
+            return null;
+        }
+
+        // 입력된 지역이 삭제되거나 사용 불가능한 경우 조회 결과 없음
+        return QArea.area.town.eq(town)
+                .and(QArea.area.hasAvailable.isFalse())
+                .and(QArea.area.deletedAt.isNull());
     }
 
     private OrderSpecifier<?> getOrderBy(Pageable pageable) {

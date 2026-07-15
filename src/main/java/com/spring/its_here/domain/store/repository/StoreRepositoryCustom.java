@@ -6,6 +6,6 @@ import org.springframework.data.domain.Pageable;
 
 public interface StoreRepositoryCustom {
 
-    Page<StoreGetAllResponseDto> getAllStores(String name, String category, Pageable pageable);
+    Page<StoreGetAllResponseDto> getAllStores(String name, String category, String town, Pageable pageable);
 
 }

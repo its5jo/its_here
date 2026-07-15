@@ -1,5 +1,6 @@
 package com.spring.its_here.domain.store.controller;
 
+import com.spring.its_here.domain.store.controller.docs.StoreApi;
 import com.spring.its_here.domain.store.dto.request.StoreCreateRequestDto;
 import com.spring.its_here.domain.store.dto.request.StoreUpdateRequestDto;
 import com.spring.its_here.domain.store.dto.response.*;
@@ -26,7 +27,7 @@ import java.util.UUID;
 @RequestMapping("/api/stores")
 @RestController
 @RequiredArgsConstructor
-public class StoreController {
+public class StoreController implements StoreApi {
 
     private final StoreService storeService;
 
@@ -54,6 +55,7 @@ public class StoreController {
     public ResponseEntity<ApiResponse<StoreGetAllPageResponseDto>> getAllStores(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String category,
+            @RequestParam(required = false) String area,
             @PageableDefault(
                     size = 10,
                     sort = "createdAt",
@@ -61,7 +63,7 @@ public class StoreController {
             ) Pageable pageable
     ) {
         Pageable validatedPageable = validatePageable(pageable);
-        Page<StoreGetAllResponseDto> responseDtoList = storeService.getAllStores(name, category, validatedPageable);
+        Page<StoreGetAllResponseDto> responseDtoList = storeService.getAllStores(name, category, area, validatedPageable);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success("가게 목록 조회 성공", StoreGetAllPageResponseDto.from(responseDtoList)));

@@ -71,9 +71,10 @@ public class StoreService {
 
     @PreAuthorize("hasAnyAuthority('MANAGER','MASTER')")
     @Transactional(readOnly = true)
-    public Page<StoreGetAllResponseDto> getAllStores(String name, String category, Pageable pageable) {
+    public Page<StoreGetAllResponseDto> getAllStores(
+            String name, String category, String town, Pageable pageable) {
         Pageable newPageable = validatePageable(pageable);
-        return storeRepository.getAllStores(name, category, newPageable);
+        return storeRepository.getAllStores(name, category, town, newPageable);
     }
 
     @PreAuthorize("hasAnyAuthority('OWNER','MANAGER','MASTER')")
