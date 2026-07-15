@@ -1,10 +1,10 @@
 package com.spring.its_here.domain.store.repository;
 
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.NumberExpression;
-import com.querydsl.core.types.dsl.StringExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.spring.its_here.domain.area.entity.QArea;
 import com.spring.its_here.domain.category.entity.QCategory;
@@ -13,6 +13,7 @@ import com.spring.its_here.domain.store.entity.QStore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import org.springframework.data.domain.Pageable;
@@ -67,7 +68,7 @@ public class StoreRepositoryImpl implements StoreRepositoryCustom {
                         qStore.deletedAt.isNull()
                 )
                 .offset(pageable.getOffset())
-                .orderBy(qStore.createdAt.asc())
+                .orderBy(getOrderBy(pageable))
                 .limit(pageable.getPageSize())
                 .fetch();
 
@@ -102,6 +103,20 @@ public class StoreRepositoryImpl implements StoreRepositoryCustom {
         return QCategory.category.name.eq(category)
                 .and(QCategory.category.hasHidden.isFalse())
                 .and(QCategory.category.deletedAt.isNull());
+    }
+
+    private OrderSpecifier<?> getOrderBy(Pageable pageable) {
+
+        Sort.Order sort = pageable.getSort()
+                .stream()
+                .findFirst()
+                .orElse(Sort.Order.desc("createdAt"));
+
+        if (sort.getProperty().equals("name")) {
+            return sort.isAscending() ? QStore.store.name.asc() : QStore.store.name.desc();
+        }
+
+        return sort.isAscending() ? QStore.store.createdAt.asc() : QStore.store.createdAt.desc();
     }
 
 }
