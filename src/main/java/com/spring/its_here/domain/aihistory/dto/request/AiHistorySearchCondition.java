@@ -12,4 +12,22 @@ public record AiHistorySearchCondition(
         UUID idAfter,
         Integer limit
 ) {
+    public AiHistorySearchCondition {
+        if (sortBy == null) {
+            sortBy = AiHistorySortCriteria.CREATED_AT;
+        }
+
+        if (sortDirection == null) {
+            sortDirection = AiHistorySortDirection.DESCENDING;
+        }
+
+        if (limit == null) {
+            limit = 10;
+        }
+
+        limit = switch (limit) {
+            case 10, 30, 50 -> limit;
+            default -> 10;
+        };
+    }
 }

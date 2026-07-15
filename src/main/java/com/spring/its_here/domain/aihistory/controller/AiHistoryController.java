@@ -7,7 +7,6 @@ import com.spring.its_here.domain.aihistory.dto.response.AiHistoryResponseDto;
 import com.spring.its_here.domain.aihistory.service.AiHistoryService;
 import com.spring.its_here.global.response.ApiResponse;
 import com.spring.its_here.global.security.CustomUserDetails;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,6 +27,7 @@ public class AiHistoryController implements AiHistoryApi {
 
 
     @GetMapping("/ai-histories/{aiHistoryId}")
+    @Override
     public ResponseEntity<ApiResponse<AiHistoryResponseDto>> getAiHistory(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID aiHistoryId
@@ -37,6 +37,7 @@ public class AiHistoryController implements AiHistoryApi {
     }
 
     @GetMapping("/ai-histories")
+    @Override
     public ResponseEntity<ApiResponse<List<AiHistoryResponseDto>>> getAiHistories(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
@@ -45,9 +46,10 @@ public class AiHistoryController implements AiHistoryApi {
     }
 
     @GetMapping("/products/{productId}/ai-histories")
+    @Override
     public ResponseEntity<ApiResponse<AiHistoryCursorResponseDto>> getProductAiHistories(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @Valid AiHistorySearchCondition condition,
+            AiHistorySearchCondition condition,
             @PathVariable UUID productId
     ) {
         AiHistoryCursorResponseDto aiHistoryCursorResponseDto = aiHistoryService.searchAiHistories(condition, productId, userDetails.getUserId());
