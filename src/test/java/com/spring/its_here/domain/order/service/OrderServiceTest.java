@@ -1,5 +1,6 @@
 package com.spring.its_here.domain.order.service;
 
+import com.spring.its_here.domain.area.entity.Area;
 import com.spring.its_here.domain.order.dto.request.OrderCreateRequestDto;
 import com.spring.its_here.domain.order.dto.request.OrderProductRequestDto;
 import com.spring.its_here.domain.order.dto.response.OrderCancelResponseDto;
@@ -99,12 +100,16 @@ class OrderServiceTest {
     @DisplayName("주문 생성 테스트")
     class CreateOrderTest {
 
+        @Mock private Area area;
+
         @Test
         @DisplayName("주문 생성 성공")
         void create_success() {
-            when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(store));
+            when(storeRepository.findByIdWithArea(STORE_ID)).thenReturn(Optional.of(store));
             when(store.getDeletedAt()).thenReturn(null);
             when(store.getHasOpen()).thenReturn(true);
+            when(store.getArea()).thenReturn(area);
+            when(area.isHasAvailable()).thenReturn(true);
             when(productRepository.findAllById(anyList())).thenReturn(List.of(product));
             when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
                 Order order = invocation.getArgument(0);
@@ -119,7 +124,7 @@ class OrderServiceTest {
             assertThat(response.orderId()).isEqualTo(ORDER_ID);
             assertThat(response.totalAmount()).isEqualTo(20000);
 
-            verify(storeRepository).findById(STORE_ID);
+            verify(storeRepository).findByIdWithArea(STORE_ID);
             verify(productRepository).findAllById(anyList());
             verify(orderRepository).save(any(Order.class));
             verify(orderProductRepository).saveAll(anyList());
@@ -129,7 +134,7 @@ class OrderServiceTest {
         @Test
         @DisplayName("주문 생성 실패 - 존재하지 않는 가게")
         void create_fail_storeNotFound() {
-            when(storeRepository.findById(STORE_ID)).thenReturn(Optional.empty());
+            when(storeRepository.findByIdWithArea(STORE_ID)).thenReturn(Optional.empty());
 
             ItsHereException exception = assertThrows(
                     ItsHereException.class,
@@ -142,7 +147,7 @@ class OrderServiceTest {
         @Test
         @DisplayName("주문 생성 실패 - 삭제된 가게")
         void create_fail_storeDeleted() {
-            when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(store));
+            when(storeRepository.findByIdWithArea(STORE_ID)).thenReturn(Optional.of(store));
             when(store.getDeletedAt()).thenReturn(Instant.now());
 
             ItsHereException exception = assertThrows(
@@ -156,7 +161,7 @@ class OrderServiceTest {
         @Test
         @DisplayName("주문 생성 실패 - 영업 종료된 가게")
         void create_fail_storeClosed() {
-            when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(store));
+            when(storeRepository.findByIdWithArea(STORE_ID)).thenReturn(Optional.of(store));
             when(store.getDeletedAt()).thenReturn(null);
             when(store.getHasOpen()).thenReturn(false);
 
@@ -169,11 +174,34 @@ class OrderServiceTest {
         }
 
         @Test
-        @DisplayName("주문 생성 실패 - 존재하지 않는 상품 포함")
-        void create_fail_productNotFound() {
-            when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(store));
+        @DisplayName("주문 생성 실패 - 주문 불가 지역 가게")
+        void create_fail_storeAreaNotAvailable() {
+            // given
+            when(storeRepository.findByIdWithArea(STORE_ID)).thenReturn(Optional.of(store));
             when(store.getDeletedAt()).thenReturn(null);
             when(store.getHasOpen()).thenReturn(true);
+            when(store.getArea()).thenReturn(area);
+            when(area.isHasAvailable()).thenReturn(false);  // ← 주문 불가 지역
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> orderService.create(requestDto, USER_ID)
+            );
+
+            // then
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.STORE_AREA_NOT_AVAILABLE);
+            verifyNoInteractions(productRepository, orderRepository, paymentService);
+        }
+
+        @Test
+        @DisplayName("주문 생성 실패 - 존재하지 않는 상품 포함")
+        void create_fail_productNotFound() {
+            when(storeRepository.findByIdWithArea(STORE_ID)).thenReturn(Optional.of(store));
+            when(store.getDeletedAt()).thenReturn(null);
+            when(store.getHasOpen()).thenReturn(true);
+            when(store.getArea()).thenReturn(area);
+            when(area.isHasAvailable()).thenReturn(true);
             when(productRepository.findAllById(anyList())).thenReturn(List.of());
 
             ItsHereException exception = assertThrows(
