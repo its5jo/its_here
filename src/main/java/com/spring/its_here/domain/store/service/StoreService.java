@@ -66,10 +66,7 @@ public class StoreService {
         Store store = findStoreByIdAndNotDeleted(storeId);
         validateStoreOwner(userDetails, store.getUser().getId());
 
-        Category category = store.getCategory();
-        Area area = store.getArea();
-
-        return StoreGetOneResponseDto.from(store, area, category);
+        return StoreGetOneResponseDto.from(store);
     }
 
     @PreAuthorize("hasAnyAuthority('MANAGER','MASTER')")

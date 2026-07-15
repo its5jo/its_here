@@ -35,12 +35,6 @@ public class StoreRepositoryImpl implements StoreRepositoryCustom {
         QCategory qCategory = QCategory.category;
         QArea qArea = QArea.area;
 
-        // 가게의 카테고리가 삭제된 경우 카테고리 이름 뒤에 (삭제됨) 현출
-        StringExpression categoryName = categoryNameExpression(qCategory);
-
-        // 가게의 지역이 삭제된 경우 지역 이름 뒤에 (삭제됨) 현출
-        StringExpression townName = townNameExpression(qArea);
-
         // 평균 평점 계산
         NumberExpression<Double> calculateAverageRating = new CaseBuilder()
                 .when(qStore.reviewTotalCount.eq(0L))
@@ -57,9 +51,10 @@ public class StoreRepositoryImpl implements StoreRepositoryCustom {
                         StoreGetAllResponseDto.class,
                         qStore.id,
                         qStore.name,
-                        categoryName,
+                        qCategory.name,
+                        qCategory.hasHidden,
                         qStore.address,
-                        townName,
+                        qArea.town,
                         calculateAverageRating,
                         qStore.hasOpen
                 ))
@@ -92,20 +87,6 @@ public class StoreRepositoryImpl implements StoreRepositoryCustom {
         return new PageImpl<>(result, pageable, total);
     }
 
-    private StringExpression categoryNameExpression(QCategory qCategory) {
-        return new CaseBuilder()
-                .when(qCategory.deletedAt.isNotNull())
-                .then(qCategory.name.concat("(삭제됨)"))
-                .otherwise(qCategory.name);
-    }
-
-    private StringExpression townNameExpression(QArea qArea) {
-        return new CaseBuilder()
-                .when(qArea.deletedAt.isNotNull())
-                .then(qArea.town.concat("(삭제됨)"))
-                .otherwise(qArea.town);
-    }
-
     private BooleanExpression storeNameContains(String name) {
         return StringUtils.hasText(name)
                 ? QStore.store.name.contains(name)
@@ -117,8 +98,9 @@ public class StoreRepositoryImpl implements StoreRepositoryCustom {
             return null;
         }
 
-        // 입력된 카테고리가 삭제된 경우 조회 결과 없음
+        // 입력된 카테고리가 삭제되거나 숨겨진 경우 조회 결과 없음
         return QCategory.category.name.eq(category)
+                .and(QCategory.category.hasHidden.isFalse())
                 .and(QCategory.category.deletedAt.isNull());
     }
 
