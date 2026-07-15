@@ -49,7 +49,7 @@ class CategoryServiceTest {
     private CustomUserDetails userDetails;
 
     @Nested
-    @DisplayName("카테고리 생성 API 테스트")
+    @DisplayName("카테고리 생성")
     class CreateCategoryTest {
 
         @BeforeEach
@@ -68,7 +68,7 @@ class CategoryServiceTest {
 
         @Test
         @DisplayName("카테고리 생성 성공")
-        void createCategory_success() {
+        void success() {
 
             // given
             CategoryCreateRequestDto request =
