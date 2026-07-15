@@ -136,9 +136,12 @@ class StoreRepositoryTest {
     void get_all_stores_by_area() {
 
         // given
-        Category category = createCategory("양식" , false);
+        Category category = createCategory("양식" , true);
 
         Area area = createArea("서울특별시", "강남구", "역삼동");
+
+        // 지역 생성 시 hasAvailable이 false라서 true로 수정 후 테스트
+        area.updatedArea("경기도", "종로구", "역삼동", true);
 
         Store store = createStore(category, area);
 
