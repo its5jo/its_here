@@ -25,7 +25,7 @@ public interface StoreApi {
     // 생성
     @Operation(
             summary = "가게 등록",
-            description = "가게 소유자가 새로운 가게를 등록합니다.",
+            description = "가게 주인 또는 관리자가 새로운 가게를 등록합니다.",
             responses = {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "201",
@@ -58,6 +58,13 @@ public interface StoreApi {
                             content = @Content(
                                     schema = @Schema(implementation = ErrorResponse.class)
                             )
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "409",
+                            description = "이미 하나의 가게를 등록함",
+                            content = @Content(
+                                    schema = @Schema(implementation = ErrorResponse.class)
+                            )
                     )
             }
     )
@@ -80,6 +87,13 @@ public interface StoreApi {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "200",
                             description = "가게 조회 성공"
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "403",
+                            description = "고객이나 다른 가게의 주인인 경우",
+                            content = @Content(
+                                    schema = @Schema(implementation = ErrorResponse.class)
+                            )
                     ),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "404",
@@ -107,7 +121,7 @@ public interface StoreApi {
             summary = "가게 목록 조회",
             description = """
                     가게 목록을 페이지 기반으로 조회합니다.
-                    가게 이름과 카테고리를 이용해 검색할 수 있습니다.
+                    가게 이름과 카테고리/지역명을 이용해 검색할 수 있습니다.
                     """,
             responses = {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -132,6 +146,13 @@ public interface StoreApi {
             String category,
 
             @Parameter(
+                    description = "지역 검색 조건",
+                    required = false,
+                    example = "역삼동"
+            )
+            String area,
+
+            @Parameter(
                     description = "페이지 조회 및 정렬 정보",
                     required = true
             )
@@ -141,7 +162,7 @@ public interface StoreApi {
     // 수정
     @Operation(
             summary = "가게 정보 수정",
-            description = "가게 소유자가 자신이 소유한 가게 정보를 수정합니다.",
+            description = "가게 주인이나 관리자가 자신이 등록한 가게 정보를 수정합니다.",
             responses = {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "200",
@@ -198,7 +219,7 @@ public interface StoreApi {
     // 삭제
     @Operation(
             summary = "가게 삭제",
-            description = "가게 소유자가 자신이 소유한 가게를 삭제합니다.",
+            description = "가게 주인이나 관리자가 자신이 등록한 가게를 삭제합니다.",
             responses = {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "204",
