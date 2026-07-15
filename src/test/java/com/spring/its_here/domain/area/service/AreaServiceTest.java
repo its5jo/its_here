@@ -30,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -279,14 +280,66 @@ class AreaServiceTest {
 
         @Test
         @DisplayName("중복지역으로 수정하면 예외")
-        void updateArea_duplicate(){
+        void updateArea_duplicate() {
+            Area area = createTestArea(
+                    areaId,
+                    "city",
+                    "district",
+                    "town",
+                    Instant.parse("2026-07-15T11:00:00Z")
+            );
+            AreaUpdateRequestDto areaUpdateRequestDto = new AreaUpdateRequestDto(
+                    "city",
+                    "district",
+                    "town",
+                    true
+            );
+            given(areaRepository.findByIdAndDeletedAtIsNull(areaId)).willReturn(Optional.of(area));
 
+            given(areaRepository.existsByCityAndDistrictAndTownAndIdNot(
+                    areaUpdateRequestDto.city(),
+                    areaUpdateRequestDto.district(),
+                    areaUpdateRequestDto.town(),
+                    areaId
+            )).willReturn(true);
+
+            assertThatThrownBy(() -> areaService.updateArea(areaUpdateRequestDto, areaId))
+                    .isInstanceOf(ItsHereException.class)
+                    .hasMessage(ErrorCode.AREA_ALREADY_EXISTS.getMessage());
+
+            verify(areaRepository).findByIdAndDeletedAtIsNull(areaId);
+            verify(areaRepository).existsByCityAndDistrictAndTownAndIdNot(
+                    areaUpdateRequestDto.city(),
+                    areaUpdateRequestDto.district(),
+                    areaUpdateRequestDto.town(),
+                    areaId);
         }
-        
+
         @Test
         @DisplayName("존재하지 않는 지역이면 예외")
-        void updateArea_not_found(){
-            
+        void updateArea_not_found() {
+            AreaUpdateRequestDto areaUpdateRequestDto = new AreaUpdateRequestDto(
+                    "city",
+                    "district",
+                    "town",
+                    true
+            );
+
+            given(areaRepository.findByIdAndDeletedAtIsNull(areaId)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> areaService.updateArea(
+                    areaUpdateRequestDto,
+                    areaId
+            )).isInstanceOf(ItsHereException.class)
+                    .hasMessage(ErrorCode.AREA_NOT_FOUND.getMessage());
+
+            verify(areaRepository).findByIdAndDeletedAtIsNull(areaId);
+            verify(areaRepository, never()).existsByCityAndDistrictAndTownAndIdNot(
+                    anyString(),
+                    anyString(),
+                    anyString(),
+                    any(UUID.class)
+            );
         }
     }
 
