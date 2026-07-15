@@ -37,7 +37,7 @@ public enum ErrorCode {
     // order
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 주문입니다.", "O-001"),
     ORDER_ACCESS_FORBIDDEN(HttpStatus.FORBIDDEN, "해당 주문 내역에 대한 접근 권한이 없습니다.", "O-002"),
-    ORDER_CANCEL_TIMEOUT(HttpStatus.BAD_REQUEST," 취소 가능한 주문 상태가 아닙니다.", "O-003"),
+    ORDER_CANCEL_TIMEOUT(HttpStatus.BAD_REQUEST, " 취소 가능한 주문 상태가 아닙니다.", "O-003"),
     ORDER_STATUS_TRANSITION_INVALID(HttpStatus.BAD_REQUEST, "유효하지 않은 주문 상태 변경입니다.", "O-004"),
 
     // payment
@@ -67,7 +67,10 @@ public enum ErrorCode {
     ADDRESS_NOT_FOUND(HttpStatus.NOT_FOUND, "주소를 찾을 수 없습니다.", "AD-002"),
 
     // ai infrastructure
-    AI_API_REQUEST_FAILED(HttpStatus.BAD_REQUEST, "ai api 요청이 실패하였습니다.", "AI-001");
+    AI_API_REQUEST_FAILED(HttpStatus.BAD_REQUEST, "ai api 요청이 실패하였습니다.", "AI-001"),
+
+    // ai_history
+    AI_HISTORY_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 ai기록을 찾을 수 없습니다.", "AH-001")
     ;
 
     private final String message;
