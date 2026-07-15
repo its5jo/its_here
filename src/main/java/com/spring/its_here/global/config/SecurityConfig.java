@@ -73,7 +73,10 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
 
                                 // h2 접근 허용
-                                "/h2-console/**"
+                                "/h2-console/**",
+
+                                // healthCheck 접근 허용
+                                "/health"
                         ).permitAll()
                         // 그 외 모든 요청 권한 필요
                         .anyRequest().authenticated()
