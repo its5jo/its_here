@@ -16,6 +16,12 @@ spring:
         jdbc:
           batch_size: 50
     open-in-view: false
+  ai:
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY}
+        chat:
+          model: gemini-2.5-flash
 
 logging:
   level:
