@@ -7,6 +7,7 @@ import com.spring.its_here.domain.order.dto.response.OrderListResponseDto;
 import com.spring.its_here.domain.order.dto.response.OrderResponseDto;
 import com.spring.its_here.domain.order.dto.response.OrderStatusResponseDto;
 import com.spring.its_here.domain.order.enums.OrderStatus;
+import com.spring.its_here.domain.payment.dto.response.PaymentResponseDto;
 import com.spring.its_here.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -95,5 +96,19 @@ public interface OrderApi {
             @Parameter(hidden = true) CustomUserDetails userDetails,
             @Parameter(description = "주문 ID") UUID orderId,
             @Parameter(description = "변경할 주문 상태") OrderStatusUpdateRequestDto requestDto
+    );
+
+    @Operation(
+            summary = "주문별 결제 조회",
+            description = "주문 ID로 해당 주문의 결제 정보를 조회합니다."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "결제 조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "로그인 필요"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "결제 없음")
+    })
+    ResponseEntity<ApiResponse<PaymentResponseDto>> getPayment(
+            @Parameter(hidden = true) CustomUserDetails userDetails,
+            @Parameter(description = "주문 ID") UUID orderId
     );
 }
