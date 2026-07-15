@@ -17,6 +17,7 @@ import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
 import com.spring.its_here.infrastructure.ai.AiClient;
 import com.spring.its_here.infrastructure.ai.ProductDescriptionPromptGenerator;
+import com.spring.its_here.infrastructure.ai.Prompt;
 import com.spring.its_here.infrastructure.storage.ImageStorage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -68,7 +69,7 @@ public class ProductServiceImpl implements ProductService {
 
         String description = productCreateCommand.description();
         String aiResponse = null;
-        String prompt = null;
+        Prompt prompt = null;
 
         if (productCreateCommand.useAiDescription()) {
             log.debug("상품 설명 AI 생성 요청. storeId={}, userId={}", store.getId(), loginUserId);
@@ -94,7 +95,7 @@ public class ProductServiceImpl implements ProductService {
 
         if (aiResponse != null) {
             AiHistory savedAiHistory = aiHistoryRepository.save(
-                    AiHistory.create(saved, prompt, aiResponse)
+                    AiHistory.create(saved, prompt.serialize(), aiResponse)
             );
             log.info(
                     "상품 설명 AI 생성 및 이력 저장 완료. aiHistoryId={}, productId={}, storeId={}, userId={}",

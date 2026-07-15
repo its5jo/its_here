@@ -64,7 +64,11 @@ public enum ErrorCode {
 
     // address
     ADDRESS_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 등록된 주소입니다.", "AD-001"),
-    ADDRESS_NOT_FOUND(HttpStatus.NOT_FOUND, "주소를 찾을 수 없습니다.", "AD-002");
+    ADDRESS_NOT_FOUND(HttpStatus.NOT_FOUND, "주소를 찾을 수 없습니다.", "AD-002"),
+
+    // ai infrastructure
+    AI_API_REQUEST_FAILED(HttpStatus.BAD_REQUEST, "ai api 요청이 실패하였습니다.", "AI-001");
+    ;
 
     private final String message;
     private final HttpStatus status;
