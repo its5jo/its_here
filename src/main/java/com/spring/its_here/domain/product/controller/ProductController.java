@@ -88,7 +88,7 @@ public class ProductController implements ProductApi {
 
     @GetMapping("/stores/{storeId}/products")
     public ResponseEntity<ApiResponse<ProductCursorResponseDto>> getStoreProducts(
-            @Valid ProductSearchCondition condition,
+            ProductSearchCondition condition,
             @PathVariable UUID storeId
     ) {
         ProductCursorResponseDto productCursorResponseDto = productService.searchStoreProducts(condition, storeId);

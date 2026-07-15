@@ -44,4 +44,7 @@ public interface StoreRepository extends JpaRepository<Store, UUID>, StoreReposi
     """)
     void deleteReview(UUID storeId, Double rating);
 
+    @Query("SELECT s FROM Store s JOIN FETCH s.area WHERE s.id = :storeId")
+    Optional<Store> findByIdWithArea(UUID storeId);
+
 }
