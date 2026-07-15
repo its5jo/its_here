@@ -3,9 +3,8 @@ package com.spring.its_here.domain.review.controller;
 
 import com.spring.its_here.domain.review.dto.request.ReviewCreateRequestDto;
 import com.spring.its_here.domain.review.dto.request.ReviewGetAllRequestDto;
-import com.spring.its_here.domain.review.dto.response.ReviewCreateResponseDto;
-import com.spring.its_here.domain.review.dto.response.ReviewGetAllResponseDto;
-import com.spring.its_here.domain.review.dto.response.ReviewGetOneResponseDto;
+import com.spring.its_here.domain.review.dto.request.ReviewUpdateRequestDto;
+import com.spring.its_here.domain.review.dto.response.*;
 import com.spring.its_here.domain.review.service.ReviewService;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
@@ -79,9 +78,37 @@ public class ReviewController implements ReviewApi {
         ));
     }
 
+    // 리뷰 작성 후 24시간 이내 수정 가능하도록 했는가?
+    // 이미 삭제된 리뷰 수정 불가능하게 했는가?
+    @PutMapping("{reviewId}")
+    public ResponseEntity<ApiResponse<ReviewUpdateResponseDto>> updateReview(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("reviewId") UUID reviewId,
+            @Valid @RequestBody ReviewUpdateRequestDto reviewUpdateRequestDto
+    ) {
+        ReviewUpdateResponseDto reviewUpdateResponseDto = reviewService.updateReview(
+                userDetails,
+                reviewId,
+                reviewUpdateRequestDto
+        );
+
+        return ResponseEntity.ok(ApiResponse.success("리뷰 수정 성공", reviewUpdateResponseDto));
+    }
+
+    @DeleteMapping("/{reviewId}")
+    public ResponseEntity<ApiResponse<Void>> deleteReview(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("reviewId") UUID reviewId
+    ) {
+        reviewService.deleteReview(
+                userDetails,
+                reviewId
+        );
+        return ResponseEntity.noContent().build();
+    }
+
     private Pageable normalizeSize(Pageable pageable) {
         int size = pageable.getPageSize();
-
         if (size != 10 && size != 30 && size != 50) {
             size = 10;
         }
