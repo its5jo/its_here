@@ -70,16 +70,7 @@ public class ProductServiceImpl implements ProductService {
                     productCreateCommand.name(),
                     productCreateCommand.price()
             );
-            long aiStartedAt = System.nanoTime();
             aiResponse = aiClient.generateDescription(prompt);
-            long aiElapsedMs =
-                    (System.nanoTime() - aiStartedAt) / 1_000_000;
-            log.info(
-                    "Gemini 상품 설명 생성 시간. elapsedMs={}, storeId={}, userId={}",
-                    aiElapsedMs,
-                    productCreateCommand.storeId(),
-                    loginUserId
-            );
             description = aiResponse;
         }
 

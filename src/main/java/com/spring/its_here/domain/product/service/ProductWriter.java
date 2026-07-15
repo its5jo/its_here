@@ -34,7 +34,7 @@ public class ProductWriter {
             Prompt prompt,
             String aiResponse
     ) {
-        long startedAt = System.nanoTime();
+
         Store store = storeRepository.findById(productCreateCommand.storeId())
                 .orElseThrow(() -> new ItsHereException(ErrorCode.STORE_NOT_FOUND));
 
@@ -45,9 +45,7 @@ public class ProductWriter {
                     loginUserId,
                     store.getId()
             );
-
             throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
-
         }
 
         Product product = Product.create(
@@ -78,14 +76,6 @@ public class ProductWriter {
                     loginUserId
             );
         }
-        long elapsedMs =
-                (System.nanoTime() - startedAt) / 1_000_000;
-        log.info(
-                "상품 DB 저장 트랜잭션 처리 시간. elapsedMs={}, storeId={}, userId={}",
-                elapsedMs,
-                productCreateCommand.storeId(),
-                loginUserId
-        );
         return new ProductCreateResponseDto(savedProduct.getId());
     }
 
