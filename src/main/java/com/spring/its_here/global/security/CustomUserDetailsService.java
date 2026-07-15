@@ -17,7 +17,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username)
             throws UsernameNotFoundException {
-        UserEntity user = userRepository.findByUsername(username)
+        UserEntity user = userRepository.findByUsernameAndHasDeletedFalse(username)
                 .orElseThrow(() ->
                         new UsernameNotFoundException("존재하지 않는 사용자입니다."));
 
@@ -25,7 +25,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
 
     public UserDetails loadUserById(Long userId) {
-        UserEntity user = userRepository.findById(userId)
+        UserEntity user = userRepository.findByIdAndHasDeletedFalse(userId)
                 .orElseThrow(() ->
                         new UsernameNotFoundException("존재하지 않는 사용자입니다."));
 

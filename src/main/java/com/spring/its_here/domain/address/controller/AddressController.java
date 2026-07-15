@@ -2,6 +2,7 @@ package com.spring.its_here.domain.address.controller;
 
 import com.spring.its_here.domain.address.dto.request.AddressCreateRequestDto;
 import com.spring.its_here.domain.address.dto.request.AddressUpdateRequestDto;
+import com.spring.its_here.domain.address.dto.response.AddressGetAllResponseDto;
 import com.spring.its_here.domain.address.dto.response.AddressGetResponseDto;
 import com.spring.its_here.domain.address.dto.response.AddressResponseDto;
 import com.spring.its_here.domain.address.service.AddressService;
@@ -10,6 +11,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -76,13 +80,20 @@ public class AddressController {
             description = "Customer 권한을 가진 사용자가 자신의 배달 주소 목록을 조회합니다."
     )
     @GetMapping
-    public ResponseEntity<ApiResponse<Void>> getAll() {
-        return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(ApiResponse.success(
+    public ResponseEntity<ApiResponse<AddressGetAllResponseDto>> getAll(
+            @RequestParam(required = false) String address,
+            @PageableDefault(
+                    size = 10,
+                    sort = "createdAt",
+                    direction = Sort.Direction.DESC
+            ) Pageable pageable
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.success(
                         "주소 목록 조회 성공",
-                        addressService.getAll()
-                ));
+                        addressService.getAll(address, pageable)
+                )
+        );
     }
 
     @Operation(
