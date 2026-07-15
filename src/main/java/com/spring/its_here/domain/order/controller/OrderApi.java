@@ -18,7 +18,7 @@ import org.springframework.http.ResponseEntity;
 
 import java.util.UUID;
 
-@Tag(name = "주문 API", description = "주문 관련 API")
+@Tag(name = "주문", description = "주문 API")
 public interface OrderApi {
     @Operation(
             summary = "주문 생성",
