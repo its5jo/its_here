@@ -27,17 +27,16 @@ public class PaymentService {
         return PaymentResponseDto.from(paymentRepository.save(payment));
     }
 
-    public PaymentResponseDto getPayment(UUID orderId) {
-        return null;  // TODO
-    }
-
     //주문 별 결제 조회
+    @Transactional(readOnly = true)
     public PaymentResponseDto getPaymentByOrderId(UUID orderId) {
-        return null;  // TODO
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new ItsHereException(ErrorCode.PAYMENT_NOT_FOUND));
+        return PaymentResponseDto.from(payment);
     }
 
     public Payment cancelPayment(UUID orderId) {
-        Payment payment= paymentRepository.findByOrderId(orderId)
+        Payment payment = paymentRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new ItsHereException(ErrorCode.PAYMENT_NOT_FOUND));
         payment.cancel();
         return payment;

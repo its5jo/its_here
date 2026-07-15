@@ -173,7 +173,6 @@ public class OrderService {
         return OrderStatusResponseDto.from(order);
     }
 
-
     // ===== 보조 메서드 =====
     private void validateStore(UUID storeId) {
         Store store = storeRepository.findById(storeId)

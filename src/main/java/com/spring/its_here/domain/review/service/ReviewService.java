@@ -6,10 +6,8 @@ import com.spring.its_here.domain.order.enums.OrderStatus;
 import com.spring.its_here.domain.order.repository.OrderRepository;
 import com.spring.its_here.domain.review.dto.request.ReviewCreateRequestDto;
 import com.spring.its_here.domain.review.dto.request.ReviewGetAllRequestDto;
-import com.spring.its_here.domain.review.dto.response.ReviewCreateResponseDto;
-import com.spring.its_here.domain.review.dto.response.ReviewGetAllItemsResponseDto;
-import com.spring.its_here.domain.review.dto.response.ReviewGetAllResponseDto;
-import com.spring.its_here.domain.review.dto.response.ReviewGetOneResponseDto;
+import com.spring.its_here.domain.review.dto.request.ReviewUpdateRequestDto;
+import com.spring.its_here.domain.review.dto.response.*;
 import com.spring.its_here.domain.review.entity.Review;
 import com.spring.its_here.domain.review.repository.ReviewRepository;
 import com.spring.its_here.domain.store.entity.Store;
@@ -22,10 +20,13 @@ import com.spring.its_here.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
@@ -48,7 +49,7 @@ public class ReviewService {
                 .orElseThrow(() -> new ItsHereException(ErrorCode.ORDER_NOT_FOUND));
 
         if (!order.getUserId().equals(user.getId())) {
-            throw new ItsHereException(ErrorCode.REVIEW_FORBIDDEN);
+            throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
         }
 
         if (order.getStatus() != OrderStatus.COMPLETED) {
@@ -59,7 +60,7 @@ public class ReviewService {
             throw new ItsHereException(ErrorCode.REVIEW_ALREADY_EXISTS);
         }
 
-        Store store = storeRepository.findById(order.getStoreId())
+        Store store = storeRepository.findByIdAndDeletedAtIsNull(order.getStoreId())
                 .orElseThrow(() -> new ItsHereException(ErrorCode.STORE_NOT_FOUND));
 
         Review reviewCreate = Review.savedReview(
@@ -71,7 +72,11 @@ public class ReviewService {
         );
 
         Review reviewSave = reviewRepository.save(reviewCreate);
-        store.accumulateReview(reviewCreateRequestDto.rating());
+
+        storeRepository.addReview(
+                store.getId(),
+                reviewCreateRequestDto.rating()
+        );
 
         return new ReviewCreateResponseDto(
                 reviewSave.getId(),
@@ -124,5 +129,100 @@ public class ReviewService {
                 content,
                 pageInfo
         );
+    }
+
+    @PreAuthorize("hasAuthority('CUSTOMER')")
+    @Transactional
+    public ReviewUpdateResponseDto updateReview(
+            CustomUserDetails userDetails,
+            UUID reviewId,
+            ReviewUpdateRequestDto reviewUpdateRequestDto
+    ) {
+        UserEntity user = userDetails.getUserEntity();
+
+        Review review = findByIdAndDeletedAtIsNull(reviewId);
+
+        validateReviewUpdate(
+                user,
+                review
+        );
+
+        Double oldRating = review.getRating();
+
+        review.updateReview(
+                reviewUpdateRequestDto.rating(),
+                reviewUpdateRequestDto.content()
+        );
+        try {
+            reviewRepository.flush();
+        } catch (ObjectOptimisticLockingFailureException e) {
+            // ObjectOptimisticLockingFailureException : 내가 읽었던 리뷰가 그 사이 다른 요청에 의해 바뀌었다
+            throw new ItsHereException(ErrorCode.REVIEW_CONFLICT);
+        }
+        storeRepository.modifyReviewRating(
+                review.getStore().getId(),
+                oldRating,
+                reviewUpdateRequestDto.rating()
+        );
+
+        return ReviewUpdateResponseDto.from(review.getId());
+    }
+
+    @PreAuthorize("hasAuthority('CUSTOMER')")
+    @Transactional
+    public void deleteReview(
+            CustomUserDetails userDetails,
+            UUID reviewId
+    ) {
+        UserEntity user = userDetails.getUserEntity();
+        Review review = findByIdAndDeletedAtIsNull(reviewId);
+
+        validReviewCustomer(
+                user,
+                review
+        );
+
+        double rating = review.getRating();
+        review.delete(user.getId());
+
+        try {
+            reviewRepository.flush();
+        } catch (ObjectOptimisticLockingFailureException e) {
+            throw new ItsHereException(ErrorCode.REVIEW_CONFLICT);
+        }
+
+        storeRepository.deleteReview(
+                review.getStore().getId(),
+                rating
+        );
+    }
+
+    private Review findByIdAndDeletedAtIsNull(UUID reviewId) {
+        return reviewRepository.findByIdAndDeletedAtIsNull(reviewId)
+                .orElseThrow(() -> new ItsHereException(ErrorCode.REVIEW_NOT_FOUND));
+    }
+
+    private void validateReviewUpdate(
+            UserEntity user,
+            Review review
+    ) {
+        validReviewCustomer(user, review);
+        validateReviewUpdatePeriod(review);
+    }
+
+    private void validReviewCustomer(
+            UserEntity user,
+            Review review
+    ) {
+        if (!review.getUser().getId().equals(user.getId())) {
+            throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
+        }
+    }
+
+    // Instant 타입에는 plusHours 라는 메서드가 없다 (LocalDateTime)
+    private void validateReviewUpdatePeriod(Review review) {
+        if (review.getCreatedAt().plus(24, ChronoUnit.HOURS).isBefore(Instant.now())) {
+            throw new ItsHereException(ErrorCode.REVIEW_UPDATE_PERIOD_EXPIRED);
+        }
     }
 }

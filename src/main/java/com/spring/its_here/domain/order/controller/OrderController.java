@@ -8,6 +8,8 @@ import com.spring.its_here.domain.order.dto.response.OrderResponseDto;
 import com.spring.its_here.domain.order.dto.response.OrderStatusResponseDto;
 import com.spring.its_here.domain.order.enums.OrderStatus;
 import com.spring.its_here.domain.order.service.OrderService;
+import com.spring.its_here.domain.payment.dto.response.PaymentResponseDto;
+import com.spring.its_here.domain.payment.service.PaymentService;
 import com.spring.its_here.global.response.ApiResponse;
 import com.spring.its_here.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
@@ -25,6 +27,7 @@ import java.util.UUID;
 public class OrderController implements OrderApi {
 
     private final OrderService orderService;
+    private final PaymentService paymentService;
 
     @PostMapping
     @Override
@@ -81,5 +84,14 @@ public class OrderController implements OrderApi {
                 userDetails.getUserId(),
                 userDetails.getRole());
         return ResponseEntity.ok(ApiResponse.success("주문 상태 변경 성공",response));
+    }
+
+    @GetMapping("/{orderId}/payment")
+    @Override
+    public ResponseEntity<ApiResponse<PaymentResponseDto>> getPayment(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID orderId ) {
+        PaymentResponseDto response = paymentService.getPaymentByOrderId(orderId);
+        return ResponseEntity.ok(ApiResponse.success("결제 조회 성공", response));
     }
 }

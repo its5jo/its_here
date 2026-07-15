@@ -148,23 +148,6 @@ class ReviewControllerTest {
         }
     }
 
-    /*
-    * {
-	"message": "리뷰 단건 조회 성공",
-	"code": "SUCCESS",
-	"data": {
-		"reviewId" : "UUID",
-		"orderId" : "UUID",
-		"storeId" : "UUID",
-		"userId" : 1L,
-		"rating" : "UUID",
-		"content" : "너무 맛있어요",
-		"createdAt" : "",
-		"updatedAt" : ""
-	}
-}
-    *
-    * */
     @Nested
     @DisplayName("조회")
     class getReview {

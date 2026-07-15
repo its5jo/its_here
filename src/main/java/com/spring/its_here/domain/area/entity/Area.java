@@ -49,4 +49,16 @@ public class Area extends BaseDeletableEntity {
         area.town = town;
         return area;
     }
+
+    public void updatedArea(
+            String city,
+            String district,
+            String town,
+            boolean hasAvailable
+    ) {
+        this.city = city;
+        this.district = district;
+        this.town = town;
+        this.hasAvailable = hasAvailable;
+    }
 }
