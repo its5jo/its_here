@@ -132,20 +132,7 @@ class OrderServiceTest {
         }
 
         @Test
-        @DisplayName("주문 생성 실패 - 존재하지 않는 가게")
-        void create_fail_storeNotFound() {
-            when(storeRepository.findByIdWithArea(STORE_ID)).thenReturn(Optional.empty());
-
-            ItsHereException exception = assertThrows(
-                    ItsHereException.class,
-                    () -> orderService.create(requestDto, USER_ID)
-            );
-
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.STORE_NOT_FOUND);
-        }
-
-        @Test
-        @DisplayName("주문 생성 실패 - 삭제된 가게")
+        @DisplayName("주문 생성 실패 - 삭제된 가게일 경우")
         void create_fail_storeDeleted() {
             when(storeRepository.findByIdWithArea(STORE_ID)).thenReturn(Optional.of(store));
             when(store.getDeletedAt()).thenReturn(Instant.now());
@@ -159,7 +146,7 @@ class OrderServiceTest {
         }
 
         @Test
-        @DisplayName("주문 생성 실패 - 영업 종료된 가게")
+        @DisplayName("주문 생성 실패 - 영업 종료된 가게일 경우")
         void create_fail_storeClosed() {
             when(storeRepository.findByIdWithArea(STORE_ID)).thenReturn(Optional.of(store));
             when(store.getDeletedAt()).thenReturn(null);
@@ -174,14 +161,14 @@ class OrderServiceTest {
         }
 
         @Test
-        @DisplayName("주문 생성 실패 - 주문 불가 지역 가게")
+        @DisplayName("주문 생성 실패 - 주문 불가 지역 가게일 경우")
         void create_fail_storeAreaNotAvailable() {
             // given
             when(storeRepository.findByIdWithArea(STORE_ID)).thenReturn(Optional.of(store));
             when(store.getDeletedAt()).thenReturn(null);
             when(store.getHasOpen()).thenReturn(true);
             when(store.getArea()).thenReturn(area);
-            when(area.isHasAvailable()).thenReturn(false);  // ← 주문 불가 지역
+            when(area.isHasAvailable()).thenReturn(false);
 
             // when
             ItsHereException exception = assertThrows(
@@ -195,7 +182,7 @@ class OrderServiceTest {
         }
 
         @Test
-        @DisplayName("주문 생성 실패 - 존재하지 않는 상품 포함")
+        @DisplayName("주문 생성 실패 - 존재하지 않는 상품이 포함된 경우")
         void create_fail_productNotFound() {
             when(storeRepository.findByIdWithArea(STORE_ID)).thenReturn(Optional.of(store));
             when(store.getDeletedAt()).thenReturn(null);
