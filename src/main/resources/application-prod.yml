@@ -1,10 +1,16 @@
 spring:
   datasource:
+    driver-class-name: org.postgresql.Driver
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update # 개발 중이므로 update(추후에 validate로 수정 예정)
     show-sql: false
+
+storage:
+  type: local
+  local:
+    root-path: ./storage

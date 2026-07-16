@@ -1,0 +1,113 @@
+package com.spring.its_here.domain.product.entity;
+
+import com.spring.its_here.domain.store.entity.Store;
+import com.spring.its_here.global.base.BaseDeletableEntity;
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import java.util.UUID;
+
+@Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(name = "p_product")
+public class Product extends BaseDeletableEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", nullable = false, updatable = false)
+    private UUID id;
+
+    @Column(name = "name", nullable = false)
+    private String name;
+
+    @Column(name = "description")
+    private String description;
+
+    @Column(name = "has_hidden", nullable = false)
+    private boolean hasHidden;
+
+    @Column(name = "price", nullable = false)
+    private int price;
+
+    @Column(name = "image_url")
+    private String imageUrl;
+
+    @JoinColumn(name = "store_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    private Store store;
+
+    private Product(String name, String description, boolean hasHidden, int price, String imageUrl, Store store) {
+        validateName(name);
+        validatePrice(price);
+        this.name = name;
+        this.description = description;
+        this.hasHidden = hasHidden;
+        this.price = price;
+        this.imageUrl = imageUrl;
+        this.store = store;
+    }
+
+    public static Product create(
+            String name,
+            String description,
+            boolean hasHidden,
+            int price,
+            String imageUrl,
+            Store store
+    ) {
+        return new Product(
+                name,
+                description,
+                hasHidden,
+                price,
+                imageUrl,
+                store
+        );
+    }
+
+    public void update(
+            String name,
+            String description,
+            Boolean hasHidden,
+            Integer price,
+            String imageUrl
+    ) {
+        if (name != null) {
+            validateName(name);
+            this.name = name;
+        }
+
+        if (description != null) {
+            this.description = description;
+        }
+
+        if (hasHidden != null) {
+            this.hasHidden = hasHidden;
+        }
+
+        if (price != null) {
+            validatePrice(price);
+            this.price = price;
+        }
+
+        if (imageUrl != null) {
+            this.imageUrl = imageUrl;
+        }
+    }
+    
+    private static void validateName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("상품명은 필수입니다.");
+        }
+    }
+
+    private static void validatePrice(int price) {
+        if (price < 0) {
+            throw new IllegalArgumentException("상품 가격은 0원 이상이어야 합니다.");
+        }
+    }
+
+
+}
