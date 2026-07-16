@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,7 +22,7 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
                   AND p.deletedAt IS NULL
                   AND p.hasHidden = false
                   AND (
-                      :cursor IS NULL
+                      :isFirstPage = true
                       OR (
                           :sortDirection = 'ASCENDING'
                           AND (
@@ -46,9 +47,10 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
             """)
     Slice<Product> searchProductsByCursor(
             @Param("storeId") UUID storeId,
-            @Param("cursor") String cursor,
+            @Param("cursor") Instant cursor,
             @Param("idAfter") UUID idAfter,
             @Param("sortDirection") String sortDirection,
+            @Param("isFirstPage") boolean isFirstPage,
             Pageable pageable
     );
 }
