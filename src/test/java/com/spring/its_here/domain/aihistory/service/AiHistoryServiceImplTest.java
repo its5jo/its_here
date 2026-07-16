@@ -356,6 +356,7 @@ class AiHistoryServiceImplTest {
                     isNull(),
                     isNull(),
                     eq("DESCENDING"),
+                    eq(true),
                     any(Pageable.class)
             )).thenReturn(aiHistorySlice);
 
@@ -416,6 +417,7 @@ class AiHistoryServiceImplTest {
                             isNull(),
                             isNull(),
                             eq("DESCENDING"),
+                            eq(true),
                             any(Pageable.class)
                     );
         }
@@ -456,6 +458,7 @@ class AiHistoryServiceImplTest {
                     isNull(),
                     isNull(),
                     eq("DESCENDING"),
+                    eq(true),
                     any(Pageable.class)
             )).thenReturn(aiHistorySlice);
 
@@ -536,6 +539,7 @@ class AiHistoryServiceImplTest {
                             any(),
                             any(),
                             anyString(),
+                            anyBoolean(),
                             any(Pageable.class)
                     );
         }
@@ -583,6 +587,7 @@ class AiHistoryServiceImplTest {
                             any(),
                             any(),
                             anyString(),
+                            anyBoolean(),
                             any(Pageable.class)
                     );
         }
@@ -594,7 +599,9 @@ class AiHistoryServiceImplTest {
             Long loginUserId = 1L;
             UUID productId = UUID.randomUUID();
             UUID idAfter = UUID.randomUUID();
-            String cursor = "2026-07-15T10:00:00Z";
+
+            String cursorValue = "2026-07-15T10:00:00Z";
+            Instant expectedCursor = Instant.parse(cursorValue);
 
             UserEntity manager = mock(UserEntity.class);
             Product product = mock(Product.class);
@@ -606,7 +613,7 @@ class AiHistoryServiceImplTest {
                     new AiHistorySearchCondition(
                             AiHistorySortCriteria.CREATED_AT,
                             AiHistorySortDirection.ASCENDING,
-                            cursor,
+                            cursorValue,
                             idAfter,
                             10
                     );
@@ -621,9 +628,10 @@ class AiHistoryServiceImplTest {
 
             when(aiHistoryRepository.searchAiHistoriesByCursor(
                     eq(productId),
-                    eq(cursor),
+                    eq(expectedCursor),
                     eq(idAfter),
                     eq("ASCENDING"),
+                    eq(false),
                     any(Pageable.class)
             )).thenReturn(aiHistorySlice);
 
@@ -644,14 +652,14 @@ class AiHistoryServiceImplTest {
             assertThat(response.content()).isEmpty();
             assertThat(response.pageInfo().hasNext()).isFalse();
 
-            verify(aiHistoryRepository)
-                    .searchAiHistoriesByCursor(
-                            eq(productId),
-                            eq(cursor),
-                            eq(idAfter),
-                            eq("ASCENDING"),
-                            any(Pageable.class)
-                    );
+            verify(aiHistoryRepository).searchAiHistoriesByCursor(
+                    eq(productId),
+                    eq(expectedCursor),
+                    eq(idAfter),
+                    eq("ASCENDING"),
+                    eq(false),
+                    any(Pageable.class)
+            );
         }
     }
 

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,7 +26,7 @@ public interface AiHistoryRepository extends JpaRepository<AiHistory, UUID> {
             FROM AiHistory ah
             WHERE ah.product.id = :productId
               AND (
-                  :cursor IS NULL
+                  :isFirstPage = true
                   OR (
                       :sortDirection = 'ASCENDING'
                       AND (
@@ -50,9 +51,10 @@ public interface AiHistoryRepository extends JpaRepository<AiHistory, UUID> {
             """)
     Slice<AiHistory> searchAiHistoriesByCursor(
             @Param("productId") UUID productId,
-            @Param("cursor") String cursor,
+            @Param("cursor") Instant cursor,
             @Param("idAfter") UUID idAfter,
             @Param("sortDirection") String sortDirection,
+            @Param("isFirstPage") boolean isFirstPage,
             Pageable pageable
     );
 }
