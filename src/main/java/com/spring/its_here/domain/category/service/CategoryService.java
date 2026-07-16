@@ -2,18 +2,18 @@ package com.spring.its_here.domain.category.service;
 
 import com.spring.its_here.domain.category.dto.request.CategoryCreateRequestDto;
 import com.spring.its_here.domain.category.dto.request.CategoryGetAllRequestDto;
+import com.spring.its_here.domain.category.dto.request.CategoryUpdateRequestDto;
 import com.spring.its_here.domain.category.dto.response.CategoryCreateResponseDto;
 import com.spring.its_here.domain.category.dto.response.CategoryGetAllResponseDto;
 import com.spring.its_here.domain.category.dto.response.CategoryGetOneResponseDto;
+import com.spring.its_here.domain.category.dto.response.CategoryUpdateResponseDto;
 import com.spring.its_here.domain.category.entity.Category;
 import com.spring.its_here.domain.category.repository.CategoryRepository;
-import com.spring.its_here.domain.user.enums.UserRole;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
 import com.spring.its_here.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -31,7 +31,9 @@ public class CategoryService {
     @Transactional
     public CategoryCreateResponseDto createCategory(CategoryCreateRequestDto requestDto) {
 
-        existsByNameAndDeletedAtIsNull(requestDto);
+        if (categoryRepository.existsByNameAndDeletedAtIsNull(requestDto.name())) {
+            throw new ItsHereException(ErrorCode.CATEGORY_NAME_DUPLICATE);
+        }
 
         Category category = Category.createCategory(requestDto.name(), requestDto.hasHidden());
 
@@ -52,10 +54,27 @@ public class CategoryService {
         return categoryRepository.getAllCategories(requestDto.name(), requestDto.hasHidden(), pageable);
     }
 
-    private void existsByNameAndDeletedAtIsNull(CategoryCreateRequestDto requestDto) {
-        if (categoryRepository.existsByNameAndDeletedAtIsNull(requestDto.name())) {
+    @PreAuthorize("hasAnyAuthority('MANAGER','MASTER')")
+    @Transactional
+    public CategoryUpdateResponseDto updateCategory(UUID categoryId, CategoryUpdateRequestDto requestDto) {
+
+        Category category = findCategoryByIdAndNotDeleted(categoryId);
+
+        if (categoryRepository.existsByNameAndIdNotAndDeletedAtIsNull(
+                requestDto.name(), categoryId)) {
             throw new ItsHereException(ErrorCode.CATEGORY_NAME_DUPLICATE);
         }
+
+        category.updateCategory(requestDto.name(), requestDto.hasHidden());
+
+        return CategoryUpdateResponseDto.from(category);
+    }
+
+    @PreAuthorize("hasAnyAuthority('MANAGER','MASTER')")
+    @Transactional
+    public void deleteCategory(CustomUserDetails userDetails, UUID categoryId) {
+        Category category = findCategoryByIdAndNotDeleted(categoryId);
+        category.delete(userDetails.getUserId());
     }
 
     private Category findCategoryByIdAndNotDeleted(UUID categoryId){
