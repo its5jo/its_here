@@ -138,9 +138,8 @@ AI를 활용한 상품 설명 생성을 지원하는 주문 서비스입니다.
 
 ## 6. API Docs
 
-애플리케이션 실행 후 Swagger UI에서 전체 API 명세를 확인하고 테스트할 수 있습니다.
+Swagger UI를 통해 전체 API 명세를 확인하고 직접 테스트할 수 있습니다.
 
-```text
-http://localhost:8080/swagger-ui/index.html
-```
+- 로컬 환경: http://localhost:8080/swagger-ui/index.html
+- 배포 환경: http://43.200.62.125/swagger-ui/index.html
 
