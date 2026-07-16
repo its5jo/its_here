@@ -43,6 +43,11 @@ public class StoreService {
         validateStoreCreate(userDetails, requestDto);
 
         Category category = findCategoryByIdAndNotDeleted(requestDto.categoryId());
+
+        if(category.isHasHidden()){
+            throw new ItsHereException(ErrorCode.CATEGORY_HIDDEN);
+        }
+
         Area area = findAreaByIdAndNotDeleted(requestDto.areaId());
 
         Store store = Store.createStore(requestDto.name(), requestDto.address(),
@@ -61,17 +66,15 @@ public class StoreService {
         Store store = findStoreByIdAndNotDeleted(storeId);
         validateStoreOwner(userDetails, store.getUser().getId());
 
-        Category category = store.getCategory();
-        Area area = store.getArea();
-
-        return StoreGetOneResponseDto.from(store, area, category);
+        return StoreGetOneResponseDto.from(store);
     }
 
     @PreAuthorize("hasAnyAuthority('MANAGER','MASTER')")
     @Transactional(readOnly = true)
-    public Page<StoreGetAllResponseDto> getAllStores(String name, String category, Pageable pageable) {
+    public Page<StoreGetAllResponseDto> getAllStores(
+            String name, String category, String town, Pageable pageable) {
         Pageable newPageable = validatePageable(pageable);
-        return storeRepository.getAllStores(name, category, newPageable);
+        return storeRepository.getAllStores(name, category, town, newPageable);
     }
 
     @PreAuthorize("hasAnyAuthority('OWNER','MANAGER','MASTER')")
@@ -85,6 +88,10 @@ public class StoreService {
         validateStoreOwner(userDetails, store.getUser().getId());
 
         Category category = findCategoryByIdAndNotDeleted(requestDto.categoryId());
+
+        if(category.isHasHidden()){
+            throw new ItsHereException(ErrorCode.CATEGORY_HIDDEN);
+        }
 
         Area area = findAreaByIdAndNotDeleted(requestDto.areaId());
 

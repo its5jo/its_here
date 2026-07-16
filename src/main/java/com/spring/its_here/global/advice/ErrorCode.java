@@ -27,6 +27,7 @@ public enum ErrorCode {
     CATEGORY_NAME_DUPLICATE(HttpStatus.CONFLICT, "동일한 카테고리가 존재합니다.", "C-001"),
     CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "카테고리가 존재하지 않습니다.", "C-002"),
     CATEGORY_INVALID_SORT_FIELD(HttpStatus.BAD_REQUEST, "카테고리 이름과 생성일시로만 정렬할 수 있습니다.", "C-003"),
+    CATEGORY_HIDDEN(HttpStatus.BAD_REQUEST, "숨김 처리된 카테고리입니다.", "C-004"),
 
     // area
     AREA_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 등록된 지역입니다.", "A-001"),
@@ -50,6 +51,7 @@ public enum ErrorCode {
     STORE_NOT_OWNED(HttpStatus.FORBIDDEN, "가게 접근 권한이 없습니다.", "S-004"),
     STORE_CLOSED(HttpStatus.BAD_REQUEST, "가게가 영업 중이 아닙니다.", "S-005"),
     STORE_AREA_NOT_AVAILABLE(HttpStatus.BAD_REQUEST, "주문 가능한 지역의 음식점이 아닙니다.", "S-006"),
+    STORE_INVALID_SORT_FIELD(HttpStatus.BAD_REQUEST, "가게 이름과 생성일시로만 정렬할 수 있습니다.", "S-007"),
 
     // review
     REVIEW_CONTENT_VALID(HttpStatus.BAD_REQUEST, "리뷰내용 255자 이하입니다", "R-001"),

@@ -319,6 +319,7 @@ class StoreControllerTest {
                             "서울 강남구",
                             "역삼동",
                             "치킨",
+                            true,
                             4.5,
                             true,
                             LocalTime.of(9, 0),
@@ -365,6 +366,7 @@ class StoreControllerTest {
                             UUID.randomUUID(),
                             "교촌치킨 강남점",
                             "치킨",
+                            false,
                             "서울 강남구",
                             "역삼동",
                             4.5,
@@ -385,7 +387,7 @@ class StoreControllerTest {
                             1
                     );
 
-            given(storeService.getAllStores(any(), any(), any()))
+            given(storeService.getAllStores(any(), any(), any(), any()))
                     .willReturn(page);
 
             // when & then
