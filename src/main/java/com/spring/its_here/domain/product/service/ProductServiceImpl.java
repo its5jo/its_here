@@ -27,6 +27,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -200,11 +201,18 @@ public class ProductServiceImpl implements ProductService {
 
         Pageable pageable = createPageable(condition);
 
+        Instant cursor = condition.cursor() == null
+                ? null
+                : Instant.parse(condition.cursor());
+
+        boolean isFirstPage = cursor == null;
+
         Slice<Product> productSlice = productRepository.searchProductsByCursor(
                 storeId,
-                condition.cursor(),
+                cursor,
                 condition.idAfter(),
                 condition.sortDirection().name(),
+                isFirstPage,
                 pageable
         );
 
