@@ -1,6 +1,9 @@
 spring:
   profiles:
-    active: local, secret
+    active: ${SPRING_PROFILES_ACTIVE:local}
+
+  config:
+    import: optional:application-secret.yml
 
   servlet:
     multipart:
@@ -16,6 +19,13 @@ spring:
         jdbc:
           batch_size: 50
     open-in-view: false
+  ai:
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY}
+        chat:
+          options:
+            model: gemini-3.5-flash
 
 logging:
   level:

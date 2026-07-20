@@ -9,6 +9,7 @@ import com.spring.its_here.domain.area.dto.response.AreaGetOneResponseDto;
 import com.spring.its_here.domain.area.dto.response.AreaUpdateResponseDto;
 import com.spring.its_here.global.advice.ErrorResponse;
 import com.spring.its_here.global.response.ApiResponse;
+import com.spring.its_here.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -16,6 +17,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.UUID;
 
@@ -247,6 +249,10 @@ public interface AreaApi {
             }
     )
     ResponseEntity<Void> deleteArea(
+            @AuthenticationPrincipal
+            @Parameter(hidden = true)
+            CustomUserDetails customUserDetails,
+
             @Parameter(
                     description = "서비스 지역 ID",
                     required = true

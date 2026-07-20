@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -196,10 +197,7 @@ public interface ProductApi {
             }
     )
     ResponseEntity<ApiResponse<ProductCursorResponseDto>> getStoreProducts(
-            @Parameter(
-                    description = "상품 조회 및 정렬 조건",
-                    required = true
-            )
+            @ParameterObject
             ProductSearchCondition condition,
 
             @Parameter(

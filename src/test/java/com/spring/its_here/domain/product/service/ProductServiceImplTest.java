@@ -23,7 +23,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -55,6 +54,9 @@ class ProductServiceImplTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private ProductWriter productWriter;
+
     @InjectMocks
     private ProductServiceImpl productService;
 
@@ -66,15 +68,13 @@ class ProductServiceImplTest {
         @Test
         @DisplayName("가게 소유자인 OWNER는 상품을 생성할 수 있다")
         void createProduct_success() {
-
             // given
             Long loginUserId = 1L;
             UUID storeId = UUID.randomUUID();
             UUID productId = UUID.randomUUID();
-            UserEntity user = mock(UserEntity.class);
 
+            UserEntity user = mock(UserEntity.class);
             Store store = mock(Store.class);
-            Product savedProduct = mock(Product.class);
 
             ProductCreateCommand command = new ProductCreateCommand(
                     storeId,
@@ -88,16 +88,24 @@ class ProductServiceImplTest {
 
             when(userRepository.findById(loginUserId))
                     .thenReturn(Optional.of(user));
-            when(user.getRole()).thenReturn(UserRole.OWNER);
+            when(user.getRole())
+                    .thenReturn(UserRole.OWNER);
 
             when(storeRepository.findById(storeId))
                     .thenReturn(Optional.of(store));
-            when(store.getUser()).thenReturn(user);
-            when(user.getId()).thenReturn(loginUserId);
-            when(store.getId()).thenReturn(storeId);
-            when(productRepository.save(any(Product.class)))
-                    .thenReturn(savedProduct);
-            when(savedProduct.getId()).thenReturn(productId);
+            when(store.getUser())
+                    .thenReturn(user);
+            when(user.getId())
+                    .thenReturn(loginUserId);
+
+            when(productWriter.save(
+                    eq(command),
+                    eq(loginUserId),
+                    eq("고소한 커피"),
+                    isNull(),
+                    isNull(),
+                    isNull()
+            )).thenReturn(new ProductCreateResponseDto(productId));
 
             // when
             ProductCreateResponseDto response =
@@ -106,23 +114,20 @@ class ProductServiceImplTest {
             // then
             assertThat(response.productId()).isEqualTo(productId);
 
-            ArgumentCaptor<Product> captor =
-                    ArgumentCaptor.forClass(Product.class);
-
-            verify(productRepository).save(captor.capture());
-
-            Product product = captor.getValue();
-
-            assertThat(product.getName()).isEqualTo("아메리카노");
-            assertThat(product.getDescription()).isEqualTo("고소한 커피");
-            assertThat(product.getPrice()).isEqualTo(4000);
-            assertThat(product.isHasHidden()).isFalse();
-            assertThat(product.getImageUrl()).isNull();
-            assertThat(product.getStore()).isSameAs(store);
-
             verify(userRepository).findById(loginUserId);
             verify(storeRepository).findById(storeId);
+
+            verify(productWriter).save(
+                    eq(command),
+                    eq(loginUserId),
+                    eq("고소한 커피"),
+                    isNull(),
+                    isNull(),
+                    isNull()
+            );
+
             verify(imageStorage, never()).store(any());
+//            verify(aiClient, never()).generateDescription(any());
         }
 
         @Test
@@ -566,7 +571,7 @@ class ProductServiceImplTest {
     class SearchStoreProductsTest {
 
         @Test
-        @DisplayName("가게의 상품 목록을 커서 기반으로 조회할 수 있다")
+        @DisplayName("가게의 상품 목록 첫 페이지를 커서 기반으로 조회할 수 있다")
         void searchStoreProducts_success() {
             // given
             UUID storeId = UUID.randomUUID();
@@ -595,6 +600,7 @@ class ProductServiceImplTest {
                     isNull(),
                     isNull(),
                     eq("DESCENDING"),
+                    eq(true),
                     any(Pageable.class)
             )).thenReturn(productSlice);
 
@@ -618,21 +624,18 @@ class ProductServiceImplTest {
             // then
             assertThat(response.content()).hasSize(1);
 
-            assertThat(response.content().get(0).name())
-                    .isEqualTo("아메리카노");
-            assertThat(response.content().get(0).description())
-                    .isEqualTo("고소한 커피");
-            assertThat(response.content().get(0).hasHidden())
-                    .isFalse();
-            assertThat(response.content().get(0).price())
-                    .isEqualTo(4_000);
-            assertThat(response.content().get(0).imageUrl())
+            ProductResponseDto productResponse = response.content().get(0);
+
+            assertThat(productResponse.name()).isEqualTo("아메리카노");
+            assertThat(productResponse.description()).isEqualTo("고소한 커피");
+            assertThat(productResponse.hasHidden()).isFalse();
+            assertThat(productResponse.price()).isEqualTo(4_000);
+            assertThat(productResponse.imageUrl())
                     .isEqualTo("/images/americano.jpg");
 
             assertThat(response.pageInfo().paginationType())
                     .isEqualTo("CURSOR");
-            assertThat(response.pageInfo().hasNext())
-                    .isTrue();
+            assertThat(response.pageInfo().hasNext()).isTrue();
             assertThat(response.pageInfo().nextCursor())
                     .isEqualTo(createdAt.toString());
             assertThat(response.pageInfo().nextIdAfter())
@@ -649,6 +652,67 @@ class ProductServiceImplTest {
                     isNull(),
                     isNull(),
                     eq("DESCENDING"),
+                    eq(true),
+                    any(Pageable.class)
+            );
+        }
+
+        @Test
+        @DisplayName("다음 페이지 요청 시 문자열 커서를 Instant로 변환하여 조회한다")
+        void searchStoreProducts_success_nextPage() {
+            // given
+            UUID storeId = UUID.randomUUID();
+            UUID idAfter = UUID.randomUUID();
+
+            String cursorValue = "2026-07-14T10:00:00Z";
+            Instant expectedCursor = Instant.parse(cursorValue);
+
+            Store store = mock(Store.class);
+
+            @SuppressWarnings("unchecked")
+            Slice<Product> productSlice = mock(Slice.class);
+
+            ProductSearchCondition condition = new ProductSearchCondition(
+                    ProductSortCriteria.CREATED_AT,
+                    ProductSortDirection.DESCENDING,
+                    cursorValue,
+                    idAfter,
+                    10
+            );
+
+            when(storeRepository.findById(storeId))
+                    .thenReturn(Optional.of(store));
+
+            when(productRepository.searchProductsByCursor(
+                    eq(storeId),
+                    eq(expectedCursor),
+                    eq(idAfter),
+                    eq("DESCENDING"),
+                    eq(false),
+                    any(Pageable.class)
+            )).thenReturn(productSlice);
+
+            when(productSlice.getContent())
+                    .thenReturn(List.of());
+            when(productSlice.hasNext())
+                    .thenReturn(false);
+
+            // when
+            ProductCursorResponseDto response =
+                    productService.searchStoreProducts(condition, storeId);
+
+            // then
+            assertThat(response.content()).isEmpty();
+            assertThat(response.pageInfo().hasNext()).isFalse();
+            assertThat(response.pageInfo().nextCursor()).isNull();
+            assertThat(response.pageInfo().nextIdAfter()).isNull();
+
+            verify(productRepository).searchProductsByCursor(
+                    eq(storeId),
+                    eq(expectedCursor),
+                    eq(idAfter),
+                    eq("DESCENDING"),
+                    eq(false),
                     any(Pageable.class)
             );
         }
@@ -681,6 +745,7 @@ class ProductServiceImplTest {
                     isNull(),
                     isNull(),
                     eq("DESCENDING"),
+                    eq(true),
                     any(Pageable.class)
             )).thenReturn(productSlice);
 
@@ -702,6 +767,15 @@ class ProductServiceImplTest {
             assertThat(response.pageInfo().hasNext()).isFalse();
             assertThat(response.pageInfo().nextCursor()).isNull();
             assertThat(response.pageInfo().nextIdAfter()).isNull();
+
+            verify(productRepository).searchProductsByCursor(
+                    eq(storeId),
+                    isNull(),
+                    isNull(),
+                    eq("DESCENDING"),
+                    eq(true),
+                    any(Pageable.class)
+            );
         }
 
         @Test
@@ -733,10 +807,11 @@ class ProductServiceImplTest {
             verify(storeRepository).findById(storeId);
 
             verify(productRepository, never()).searchProductsByCursor(
-                    any(),
-                    any(),
-                    any(),
+                    any(UUID.class),
+                    any(Instant.class),
+                    any(UUID.class),
                     anyString(),
+                    anyBoolean(),
                     any(Pageable.class)
             );
         }

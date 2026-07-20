@@ -1,14 +1,18 @@
 package com.spring.its_here.domain.order.service;
 
+import com.spring.its_here.domain.area.entity.Area;
 import com.spring.its_here.domain.order.dto.request.OrderCreateRequestDto;
 import com.spring.its_here.domain.order.dto.request.OrderProductRequestDto;
+import com.spring.its_here.domain.order.dto.response.OrderCancelResponseDto;
 import com.spring.its_here.domain.order.dto.response.OrderListResponseDto;
 import com.spring.its_here.domain.order.dto.response.OrderResponseDto;
+import com.spring.its_here.domain.order.dto.response.OrderStatusResponseDto;
 import com.spring.its_here.domain.order.entity.Order;
 import com.spring.its_here.domain.order.enums.OrderStatus;
 import com.spring.its_here.domain.order.repository.OrderProductRepository;
 import com.spring.its_here.domain.order.repository.OrderRepository;
 import com.spring.its_here.domain.payment.dto.response.PaymentResponseDto;
+import com.spring.its_here.domain.payment.entity.Payment;
 import com.spring.its_here.domain.payment.enums.PaymentMethod;
 import com.spring.its_here.domain.payment.enums.PaymentStatus;
 import com.spring.its_here.domain.payment.service.PaymentService;
@@ -63,6 +67,7 @@ class OrderServiceTest {
 
     private UserEntity user;
     private Store store;
+    private Order order;
     private Product product;
     private OrderCreateRequestDto requestDto;
     private PaymentResponseDto paymentResponseDto;
@@ -87,7 +92,7 @@ class OrderServiceTest {
 
         paymentResponseDto = new PaymentResponseDto(
                 PAYMENT_ID, ORDER_ID, 20000, 20000,
-                PaymentMethod.CARD, PaymentStatus.COMPLETED, null, Instant.now()
+                PaymentMethod.CARD, PaymentStatus.COMPLETED, null
         );
     }
 
@@ -95,12 +100,16 @@ class OrderServiceTest {
     @DisplayName("주문 생성 테스트")
     class CreateOrderTest {
 
+        @Mock private Area area;
+
         @Test
         @DisplayName("주문 생성 성공")
         void create_success() {
-            when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(store));
+            when(storeRepository.findByIdWithArea(STORE_ID)).thenReturn(Optional.of(store));
             when(store.getDeletedAt()).thenReturn(null);
             when(store.getHasOpen()).thenReturn(true);
+            when(store.getArea()).thenReturn(area);
+            when(area.isHasAvailable()).thenReturn(true);
             when(productRepository.findAllById(anyList())).thenReturn(List.of(product));
             when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
                 Order order = invocation.getArgument(0);
@@ -115,7 +124,7 @@ class OrderServiceTest {
             assertThat(response.orderId()).isEqualTo(ORDER_ID);
             assertThat(response.totalAmount()).isEqualTo(20000);
 
-            verify(storeRepository).findById(STORE_ID);
+            verify(storeRepository).findByIdWithArea(STORE_ID);
             verify(productRepository).findAllById(anyList());
             verify(orderRepository).save(any(Order.class));
             verify(orderProductRepository).saveAll(anyList());
@@ -123,22 +132,9 @@ class OrderServiceTest {
         }
 
         @Test
-        @DisplayName("주문 생성 실패 - 존재하지 않는 가게")
-        void create_fail_storeNotFound() {
-            when(storeRepository.findById(STORE_ID)).thenReturn(Optional.empty());
-
-            ItsHereException exception = assertThrows(
-                    ItsHereException.class,
-                    () -> orderService.create(requestDto, USER_ID)
-            );
-
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.STORE_NOT_FOUND);
-        }
-
-        @Test
-        @DisplayName("주문 생성 실패 - 삭제된 가게")
+        @DisplayName("주문 생성 실패 - 삭제된 가게일 경우")
         void create_fail_storeDeleted() {
-            when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(store));
+            when(storeRepository.findByIdWithArea(STORE_ID)).thenReturn(Optional.of(store));
             when(store.getDeletedAt()).thenReturn(Instant.now());
 
             ItsHereException exception = assertThrows(
@@ -150,9 +146,9 @@ class OrderServiceTest {
         }
 
         @Test
-        @DisplayName("주문 생성 실패 - 영업 종료된 가게")
+        @DisplayName("주문 생성 실패 - 영업 종료된 가게일 경우")
         void create_fail_storeClosed() {
-            when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(store));
+            when(storeRepository.findByIdWithArea(STORE_ID)).thenReturn(Optional.of(store));
             when(store.getDeletedAt()).thenReturn(null);
             when(store.getHasOpen()).thenReturn(false);
 
@@ -165,11 +161,34 @@ class OrderServiceTest {
         }
 
         @Test
-        @DisplayName("주문 생성 실패 - 존재하지 않는 상품 포함")
-        void create_fail_productNotFound() {
-            when(storeRepository.findById(STORE_ID)).thenReturn(Optional.of(store));
+        @DisplayName("주문 생성 실패 - 주문 불가 지역 가게일 경우")
+        void create_fail_storeAreaNotAvailable() {
+            // given
+            when(storeRepository.findByIdWithArea(STORE_ID)).thenReturn(Optional.of(store));
             when(store.getDeletedAt()).thenReturn(null);
             when(store.getHasOpen()).thenReturn(true);
+            when(store.getArea()).thenReturn(area);
+            when(area.isHasAvailable()).thenReturn(false);
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> orderService.create(requestDto, USER_ID)
+            );
+
+            // then
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.STORE_AREA_NOT_AVAILABLE);
+            verifyNoInteractions(productRepository, orderRepository, paymentService);
+        }
+
+        @Test
+        @DisplayName("주문 생성 실패 - 존재하지 않는 상품이 포함된 경우")
+        void create_fail_productNotFound() {
+            when(storeRepository.findByIdWithArea(STORE_ID)).thenReturn(Optional.of(store));
+            when(store.getDeletedAt()).thenReturn(null);
+            when(store.getHasOpen()).thenReturn(true);
+            when(store.getArea()).thenReturn(area);
+            when(area.isHasAvailable()).thenReturn(true);
             when(productRepository.findAllById(anyList())).thenReturn(List.of());
 
             ItsHereException exception = assertThrows(
@@ -340,6 +359,190 @@ class OrderServiceTest {
 
             // then
             verify(orderRepository).findByDeletedAtIsNull(any(Pageable.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("주문 취소 테스트")
+    class CancelOrder {
+
+        private Order order;
+
+        @BeforeEach
+        void setUp() {
+            order = Order.create(STORE_ID, USER_ID, "서울시 강남구", "문 앞에", 20000);
+            ReflectionTestUtils.setField(order, "id", ORDER_ID);
+            ReflectionTestUtils.setField(order, "createdAt", Instant.now());
+        }
+
+        @Test
+        @DisplayName("주문 취소 성공 - CUSTOMER가 본인 주문 취소 시도할 경우")
+        void cancelOrder_success_customer() {
+            // given
+            Payment mockPayment = mock(Payment.class);
+            when(orderRepository.findByIdAndDeletedAtIsNull(ORDER_ID))
+                    .thenReturn(Optional.of(order));
+            when(paymentService.cancelPayment(ORDER_ID))
+                    .thenReturn(mockPayment);
+
+            // when
+            OrderCancelResponseDto response = orderService.cancelOrder(
+                    ORDER_ID, USER_ID, UserRole.CUSTOMER);
+
+            // then
+            assertThat(response.orderId()).isEqualTo(ORDER_ID);
+            assertThat(response.status()).isEqualTo(OrderStatus.CANCELED);
+            verify(orderRepository).findByIdAndDeletedAtIsNull(ORDER_ID);
+            verify(paymentService).cancelPayment(ORDER_ID);
+        }
+
+        @Test
+        @DisplayName("주문 취소 실패 - 존재하지 않는 주문에 대하여 주문 취소 시도한 경우")
+        void cancelOrder_fail_orderNotFound() {
+            // given
+            when(orderRepository.findByIdAndDeletedAtIsNull(ORDER_ID))
+                    .thenReturn(Optional.empty());
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> orderService.cancelOrder(ORDER_ID, USER_ID, UserRole.CUSTOMER)
+            );
+
+            // then
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ORDER_NOT_FOUND);
+            verifyNoInteractions(paymentService);
+        }
+
+        @Test
+        @DisplayName("주문 취소 실패 - CUSTOMER가 남의 주문 취소 시도한 경우")
+        void cancelOrder_fail_customerForbidden() {
+            // given
+            Long anotherUserId = 999L;
+            when(orderRepository.findByIdAndDeletedAtIsNull(ORDER_ID))
+                    .thenReturn(Optional.of(order));  // order.userId = USER_ID
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> orderService.cancelOrder(ORDER_ID, anotherUserId, UserRole.CUSTOMER)
+            );
+
+            // then
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ORDER_ACCESS_FORBIDDEN);
+            verifyNoInteractions(paymentService);
+        }
+
+        @Test
+        @DisplayName("주문 취소 실패 - 주문 후 5분이 지나서 취소 시도한 경우")
+        void cancelOrder_fail_timeout() {
+            // given
+            when(orderRepository.findByIdAndDeletedAtIsNull(ORDER_ID))
+                    .thenReturn(Optional.of(order));
+            ReflectionTestUtils.setField(order, "createdAt",
+                    Instant.now().minusSeconds(360));  // 6분 전
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> orderService.cancelOrder(ORDER_ID, USER_ID, UserRole.CUSTOMER)
+            );
+
+            // then
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ORDER_CANCEL_TIMEOUT);
+            verifyNoInteractions(paymentService);
+        }
+    }
+
+    @Nested
+    @DisplayName("주문 상태 변경 테스트")
+    class UpdateStatusTest{
+
+        private Order order;
+
+        @BeforeEach
+        void setUp() {
+            order = Order.create(STORE_ID, USER_ID, "서울시 강남구", "문 앞에", 20000);
+            ReflectionTestUtils.setField(order, "id", ORDER_ID);
+            ReflectionTestUtils.setField(order, "createdAt", Instant.now());
+        }
+
+        @Test
+        @DisplayName("상태 변경 성공 - OWNER가 본인 가게 주문의 상태변경 시도한 경우")
+        void updateStatus_success_owner() {
+            // given
+            Store mockStore = mock(Store.class);
+            when(orderRepository.findByIdAndDeletedAtIsNull(ORDER_ID))
+                    .thenReturn(Optional.of(order));
+            when(storeRepository.findByUserIdAndDeletedAtIsNull(USER_ID))
+                    .thenReturn(Optional.of(mockStore));
+            when(mockStore.getId()).thenReturn(STORE_ID);
+
+            // when
+            OrderStatusResponseDto response = orderService.updateStatus(
+                    ORDER_ID, OrderStatus.ACCEPTED, USER_ID, UserRole.OWNER);
+
+            // then
+            assertThat(response.orderId()).isEqualTo(ORDER_ID);
+            assertThat(response.status()).isEqualTo(OrderStatus.ACCEPTED);
+        }
+
+        @Test
+        @DisplayName("상태 변경 성공 - MANAGER는 전체 변경 가능")
+        void updateStatus_success_manager() {
+            // given
+            Long managerUserId = 999L;
+            when(orderRepository.findByIdAndDeletedAtIsNull(ORDER_ID))
+                    .thenReturn(Optional.of(order));
+
+            // when
+            OrderStatusResponseDto response = orderService.updateStatus(
+                    ORDER_ID, OrderStatus.ACCEPTED, managerUserId, UserRole.MANAGER);
+
+            // then
+            assertThat(response.status()).isEqualTo(OrderStatus.ACCEPTED);
+            verifyNoInteractions(storeRepository);
+        }
+
+        @Test
+        @DisplayName("상태 변경 실패 - OWNER가 남의 가게 주문 변경 시도할 경우")
+        void updateStatus_fail_ownerForbidden() {
+            // given
+            UUID anotherStoreId = UUID.randomUUID();
+            Store mockStore = mock(Store.class);
+            when(orderRepository.findByIdAndDeletedAtIsNull(ORDER_ID))
+                    .thenReturn(Optional.of(order));  // order.storeId = STORE_ID
+            when(storeRepository.findByUserIdAndDeletedAtIsNull(USER_ID))
+                    .thenReturn(Optional.of(mockStore));
+            when(mockStore.getId()).thenReturn(anotherStoreId);  // 다른 가게
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> orderService.updateStatus(
+                            ORDER_ID, OrderStatus.ACCEPTED, USER_ID, UserRole.OWNER)
+            );
+
+            // then
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ORDER_ACCESS_FORBIDDEN);
+        }
+
+        @Test
+        @DisplayName("상태 변경 실패 - 유효하지 않은 상태 전이일 경우")
+        void updateStatus_fail_invalidTransition() {
+            // given
+            when(orderRepository.findByIdAndDeletedAtIsNull(ORDER_ID))
+                    .thenReturn(Optional.of(order));  // order.status = REQUESTED
+
+            // when — REQUESTED → COMPLETED 불가
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> orderService.updateStatus(
+                            ORDER_ID, OrderStatus.COMPLETED, USER_ID, UserRole.MANAGER)
+            );
+
+            // then
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ORDER_STATUS_TRANSITION_INVALID);
         }
     }
 }

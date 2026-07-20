@@ -13,6 +13,7 @@ import com.spring.its_here.domain.area.service.AreaService;
 import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
 import com.spring.its_here.global.response.ApiResponse;
+import com.spring.its_here.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -21,6 +22,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -35,7 +37,9 @@ public class AreaController implements AreaApi {
     public ResponseEntity<ApiResponse<AreaCreateResponseDto>> createArea(
             @Valid @RequestBody AreaCreateRequestDto areaCreateRequestDto
     ) {
-        AreaCreateResponseDto areaCreateResponseDto = areaService.createArea(areaCreateRequestDto);
+        AreaCreateResponseDto areaCreateResponseDto = areaService.createArea(
+                areaCreateRequestDto
+        );
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -78,17 +82,24 @@ public class AreaController implements AreaApi {
             @RequestBody AreaUpdateRequestDto areaUpdateRequestDto,
             @PathVariable("areaId") UUID areaId
     ) {
-        AreaUpdateResponseDto areaUpdateResponseDto = areaService.updateArea(areaUpdateRequestDto, areaId);
+        AreaUpdateResponseDto areaUpdateResponseDto = areaService.updateArea(
+                areaUpdateRequestDto,
+                areaId
+        );
 
         return ResponseEntity.ok(ApiResponse.success("서비스 지역 수정 성공", areaUpdateResponseDto));
     }
 
     @DeleteMapping("/{areaId}")
     public ResponseEntity<Void> deleteArea(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable("areaId") UUID areaId
     ) {
-        areaService.deleteArea(areaId);
-        return ResponseEntity.ok().build();
+        areaService.deleteArea(
+                customUserDetails.getUserId(),
+                areaId
+        );
+        return ResponseEntity.noContent().build();
     }
 
 

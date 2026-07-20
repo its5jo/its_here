@@ -1,6 +1,5 @@
 package com.spring.its_here.domain.product.service;
 
-import com.spring.its_here.domain.aihistory.entity.AiHistory;
 import com.spring.its_here.domain.aihistory.repository.AiHistoryRepository;
 import com.spring.its_here.domain.product.dto.command.ProductCreateCommand;
 import com.spring.its_here.domain.product.dto.command.ProductUpdateCommand;
@@ -17,6 +16,7 @@ import com.spring.its_here.global.advice.ErrorCode;
 import com.spring.its_here.global.advice.ItsHereException;
 import com.spring.its_here.infrastructure.ai.AiClient;
 import com.spring.its_here.infrastructure.ai.ProductDescriptionPromptGenerator;
+import com.spring.its_here.infrastructure.ai.Prompt;
 import com.spring.its_here.infrastructure.storage.ImageStorage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +27,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -42,9 +43,9 @@ public class ProductServiceImpl implements ProductService {
     private final AiClient aiClient;
     private final ProductDescriptionPromptGenerator productDescriptionPromptGenerator;
     private final AiHistoryRepository aiHistoryRepository;
+    private final ProductWriter productWriter;
 
     @Override
-    @Transactional
     public ProductCreateResponseDto createProduct(ProductCreateCommand productCreateCommand, Long loginUserId) {
         UserEntity user = userRepository.findById(loginUserId).orElseThrow(() -> new ItsHereException(ErrorCode.USER_NOT_FOUND));
 
@@ -60,15 +61,9 @@ public class ProductServiceImpl implements ProductService {
             throw new ItsHereException(ErrorCode.AUTH_FORBIDDEN);
         }
 
-        String imagePath = null;
-        if (productCreateCommand.image() != null) {
-            imagePath = imageStorage.store(productCreateCommand.image());
-            log.debug("상품 이미지 생성 성공. path={}", imagePath);
-        }
-
         String description = productCreateCommand.description();
         String aiResponse = null;
-        String prompt = null;
+        Prompt prompt = null;
 
         if (productCreateCommand.useAiDescription()) {
             log.debug("상품 설명 AI 생성 요청. storeId={}, userId={}", store.getId(), loginUserId);
@@ -80,32 +75,21 @@ public class ProductServiceImpl implements ProductService {
             description = aiResponse;
         }
 
-        Product product = Product.create(
-                productCreateCommand.name(),
-                description,
-                productCreateCommand.hasHidden(),
-                productCreateCommand.price(),
-                imagePath,
-                store
-        );
-
-        Product saved = productRepository.save(product);
-        log.info("상품 생성 완료. productId={}, storeId={}, userId={}", saved.getId(), store.getId(), loginUserId);
-
-        if (aiResponse != null) {
-            AiHistory savedAiHistory = aiHistoryRepository.save(
-                    AiHistory.create(saved, prompt, aiResponse)
-            );
-            log.info(
-                    "상품 설명 AI 생성 및 이력 저장 완료. aiHistoryId={}, productId={}, storeId={}, userId={}",
-                    savedAiHistory.getId(),
-                    saved.getId(),
-                    store.getId(),
-                    loginUserId
-            );
+        String imagePath = null;
+        if (productCreateCommand.image() != null) {
+            imagePath = imageStorage.store(productCreateCommand.image());
+            log.debug("상품 이미지 생성 성공. path={}", imagePath);
         }
 
-        return new ProductCreateResponseDto(saved.getId());
+        return productWriter.save(
+                productCreateCommand,
+                loginUserId,
+                description,
+                imagePath,
+                prompt,
+                aiResponse
+        );
+
     }
 
     @Override
@@ -217,11 +201,18 @@ public class ProductServiceImpl implements ProductService {
 
         Pageable pageable = createPageable(condition);
 
+        Instant cursor = condition.cursor() == null
+                ? null
+                : Instant.parse(condition.cursor());
+
+        boolean isFirstPage = cursor == null;
+
         Slice<Product> productSlice = productRepository.searchProductsByCursor(
                 storeId,
-                condition.cursor(),
+                cursor,
                 condition.idAfter(),
                 condition.sortDirection().name(),
+                isFirstPage,
                 pageable
         );
 

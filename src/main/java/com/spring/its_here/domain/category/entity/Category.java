@@ -36,4 +36,9 @@ public class Category extends BaseDeletableEntity {
         return category;
     }
 
+    public void updateCategory(String name, Boolean hasHidden){
+        this.name = name;
+        this.hasHidden = hasHidden;
+    }
+
 }

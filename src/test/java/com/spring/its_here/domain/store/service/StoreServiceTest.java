@@ -270,6 +270,58 @@ class StoreServiceTest {
         }
 
         @Test
+        @DisplayName("숨김 처리된 카테고리")
+        void hidden_category() {
+
+            // given
+            UUID categoryId = UUID.randomUUID();
+            UUID areaId = UUID.randomUUID();
+
+            StoreCreateRequestDto requestDto =
+                    new StoreCreateRequestDto(
+                            "교촌치킨 강남점",
+                            "서울 강남구",
+                            true,
+                            areaId,
+                            categoryId,
+                            LocalTime.of(9, 0),
+                            LocalTime.of(22, 0)
+                    );
+
+            UserEntity user = UserEntity.create(
+                    "test1",
+                    "password",
+                    "닉네임",
+                    UserRole.MANAGER
+            );
+
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            CustomUserDetails userDetails =
+                    new CustomUserDetails(user);
+
+            // 숨김 처리된 카테고리 생성
+            Category hiddenCategory = Category.createCategory("치킨", true);
+            ReflectionTestUtils.setField(hiddenCategory, "id", categoryId);
+
+            when(categoryRepository.findByIdAndDeletedAtIsNull(categoryId))
+                    .thenReturn(Optional.of(hiddenCategory));
+
+            // when & then
+            ItsHereException exception =
+                    assertThrows(
+                            ItsHereException.class,
+                            () -> storeService.createStore(userDetails, requestDto)
+                    );
+
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.CATEGORY_HIDDEN);
+
+            verify(storeRepository, never())
+                    .save(any(Store.class));
+        }
+
+        @Test
         @DisplayName("없거나 삭제된 지역")
         void not_exists_area() {
 
@@ -396,6 +448,7 @@ class StoreServiceTest {
             assertThat(responseDto.name()).isEqualTo(store.getName());
             assertThat(responseDto.address()).isEqualTo(store.getAddress());
             assertThat(responseDto.category()).isEqualTo(category.getName());
+            assertThat(responseDto.categoryHasHidden()).isEqualTo(category.isHasHidden());
             assertThat(responseDto.area()).isEqualTo(area.getTown());
             assertThat(responseDto.rating()).isEqualTo(0.0);
             assertThat(responseDto.hasOpen()).isEqualTo(store.getHasOpen());
@@ -551,84 +604,6 @@ class StoreServiceTest {
 
         }
 
-        @Test
-        @DisplayName("삭제된 지역, 카테고리는 이름 뒤에 (삭제됨) 추가")
-        void deleted_area_category() {
-
-            // given
-
-            UUID storeId = UUID.randomUUID();
-            UUID categoryId = UUID.randomUUID();
-            UUID areaId = UUID.randomUUID();
-
-            UserEntity user = UserEntity.create(
-                    "test1",
-                    "password",
-                    "닉네임",
-                    UserRole.OWNER
-            );
-
-            ReflectionTestUtils.setField(user, "id", 1L);
-
-            CustomUserDetails userDetails =
-                    new CustomUserDetails(user);
-
-            Category category = Category.createCategory("야식", false);
-
-            ReflectionTestUtils.setField(category, "id", categoryId);
-
-            category.delete(user.getId());
-
-            Area area = Area.create("서울특별시", "강남구", "역삼동");
-
-            ReflectionTestUtils.setField(area, "id", areaId);
-
-            area.delete(user.getId());
-
-            Store store = Store.createStore(
-                    "교촌치킨 역삼점",
-                    "서울 강남구",
-                    user,
-                    category,
-                    area,
-                    true,
-                    LocalTime.of(9, 0),
-                    LocalTime.of(22, 0)
-            );
-
-            ReflectionTestUtils.setField(store, "id", storeId);
-
-            when(storeRepository.findByIdAndDeletedAtIsNull(storeId))
-                    .thenReturn(Optional.of(store));
-
-            // when
-            StoreGetOneResponseDto responseDto =
-                    storeService.getOneStore(userDetails, storeId);
-
-            // then
-
-            assertThat(responseDto).isNotNull();
-            assertThat(responseDto.name()).isEqualTo(store.getName());
-            assertThat(responseDto.address()).isEqualTo(store.getAddress());
-            assertThat(responseDto.category()).isEqualTo(category.getName() + "(삭제됨)");
-            assertThat(responseDto.area()).isEqualTo(area.getTown() + "(삭제됨)");
-            assertThat(responseDto.rating()).isEqualTo(0.0);
-            assertThat(responseDto.hasOpen()).isEqualTo(store.getHasOpen());
-            assertThat(responseDto.openAt()).isEqualTo(store.getOpenAt());
-            assertThat(responseDto.closedAt()).isEqualTo(store.getClosedAt());
-
-            verify(storeRepository)
-                    .findByIdAndDeletedAtIsNull(storeId);
-
-            // 추가 Repository 호출이 없는지 검증
-            verifyNoMoreInteractions(
-                    storeRepository,
-                    categoryRepository,
-                    areaRepository
-            );
-        }
-    }
-
     @Nested
     @DisplayName("가게 목록 조회")
     class GetAllStores {
@@ -646,6 +621,7 @@ class StoreServiceTest {
                             UUID.randomUUID(),
                             "교촌치킨 강남점",
                             "치킨",
+                            false,
                             "서울 강남구",
                             "역삼동",
                             4.5,
@@ -657,6 +633,7 @@ class StoreServiceTest {
                             UUID.randomUUID(),
                             "교촌치킨 선릉점",
                             "치킨",
+                            true,
                             "서울 강남구",
                             "삼성동",
                             3.2,
@@ -669,18 +646,20 @@ class StoreServiceTest {
             when(storeRepository.getAllStores(
                     "교촌치킨",
                     "치킨",
+                    "양재동",
                     pageable
             )).thenReturn(page);
 
             // when
             Page<StoreGetAllResponseDto> result =
-                    storeService.getAllStores("교촌치킨", "치킨", pageable);
+                    storeService.getAllStores("교촌치킨", "치킨", "양재동", pageable);
 
             // then
             assertThat(result).isEqualTo(page);
+            assertThat(result.getContent().get(0).categoryHasHidden()).isEqualTo(dto1.categoryHasHidden());
 
             verify(storeRepository)
-                    .getAllStores("교촌치킨", "치킨", pageable);
+                    .getAllStores("교촌치킨", "치킨", "양재동", pageable);
         }
 
         @Test
@@ -692,18 +671,19 @@ class StoreServiceTest {
                     PageRequest.of(
                             1,
                             20,
-                            Sort.by("createdAt").descending()
+                            Sort.by("name").descending()
                     );
 
             // 빈 Page 반환
             when(storeRepository.getAllStores(
                     any(),
                     any(),
+                    any(),
                     any(Pageable.class)
             )).thenReturn(Page.empty());
 
             // when
-            storeService.getAllStores("교촌치킨","치킨", pageable);
+            storeService.getAllStores("교촌치킨","치킨", "양재동", pageable);
 
             // then
             ArgumentCaptor<Pageable> captor =
@@ -713,6 +693,7 @@ class StoreServiceTest {
                     .getAllStores(
                             eq("교촌치킨"),
                             eq("치킨"),
+                            eq("양재동"),
                             captor.capture()
                     );
 
@@ -733,10 +714,11 @@ class StoreServiceTest {
             when(storeRepository.getAllStores(
                     any(),
                     any(),
+                    any(),
                     any(Pageable.class)
             )).thenReturn(Page.empty());
 
-            storeService.getAllStores("교촌치킨","치킨", pageable);
+            storeService.getAllStores("교촌치킨","치킨", "양재동", pageable);
 
             ArgumentCaptor<Pageable> captor =
                     ArgumentCaptor.forClass(Pageable.class);
@@ -745,6 +727,7 @@ class StoreServiceTest {
                     .getAllStores(
                             eq("교촌치킨"),
                             eq("치킨"),
+                            eq("양재동"),
                             captor.capture()
                     );
 
@@ -1081,6 +1064,83 @@ class StoreServiceTest {
         }
 
         @Test
+        @DisplayName("숨김 처리된 카테고리로 수정")
+        void hidden_category() {
+
+            // given
+            UUID categoryId = UUID.randomUUID();
+            UUID areaId = UUID.randomUUID();
+            UUID storeId = UUID.randomUUID();
+
+            StoreUpdateRequestDto requestDto =
+                    new StoreUpdateRequestDto(
+                            "보어앤헝그리",
+                            "서울 성동구",
+                            false,
+                            areaId,
+                            categoryId,
+                            LocalTime.of(12, 0),
+                            LocalTime.of(21, 0)
+                    );
+
+            UserEntity user = UserEntity.create(
+                    "owner1",
+                    "Owner1!!",
+                    "찐주인",
+                    UserRole.OWNER
+            );
+
+            ReflectionTestUtils.setField(user, "id", 1L);
+
+            CustomUserDetails userDetails = new CustomUserDetails(user);
+
+            Category category = Category.createCategory("중식", false);
+
+            Area area = Area.create("서울특별시", "강남구", "삼성동");
+
+            Store store = Store.createStore(
+                    "기존가게",
+                    "서울 성동구",
+                    user,
+                    category,
+                    area,
+                    true,
+                    LocalTime.of(9, 0),
+                    LocalTime.of(22, 0)
+            );
+            ReflectionTestUtils.setField(store, "id", storeId);
+
+            when(storeRepository.findByIdAndDeletedAtIsNull(storeId))
+                    .thenReturn(Optional.of(store));
+
+            when(storeRepository.existsByNameAndDeletedAtIsNullAndIdNot(
+                    requestDto.name(), storeId))
+                    .thenReturn(false);
+
+            // 숨김 카테고리
+            Category hiddenCategory =
+                    Category.createCategory("한식", true);
+
+            ReflectionTestUtils.setField(hiddenCategory, "id", categoryId);
+
+            when(categoryRepository.findByIdAndDeletedAtIsNull(categoryId))
+                    .thenReturn(Optional.of(hiddenCategory));
+
+            // when
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> storeService.updateStore(userDetails, storeId, requestDto)
+            );
+
+            // then
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.CATEGORY_HIDDEN);
+
+            verify(areaRepository, never())
+                    .findByIdAndDeletedAtIsNull(any());
+        }
+
+        @Test
         @DisplayName("중복되는 가게 이름으로 수정하려는 경우")
         void already_exists_store_name() {
 
@@ -1243,7 +1303,7 @@ class StoreServiceTest {
 
     @DisplayName("가게 삭제")
     @Nested
-    class DeleteStore{
+    class DeleteStore {
 
         @Test
         @DisplayName("성공")
@@ -1455,6 +1515,7 @@ class StoreServiceTest {
 
         }
 
+        }
     }
 
 }

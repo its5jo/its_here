@@ -173,10 +173,9 @@ public class OrderService {
         return OrderStatusResponseDto.from(order);
     }
 
-
     // ===== 보조 메서드 =====
     private void validateStore(UUID storeId) {
-        Store store = storeRepository.findById(storeId)
+        Store store = storeRepository.findByIdWithArea(storeId)
             .orElseThrow(() -> new ItsHereException(ErrorCode.STORE_NOT_FOUND));
         if (store.getDeletedAt() != null) {
             throw new ItsHereException(ErrorCode.STORE_NOT_FOUND);
@@ -184,6 +183,11 @@ public class OrderService {
 
         if (!store.getHasOpen()) {
             throw new ItsHereException(ErrorCode.STORE_CLOSED);
+        }
+
+        //광화문 지역 검증 추가
+        if (!store.getArea().isHasAvailable()) {
+            throw new ItsHereException(ErrorCode.STORE_AREA_NOT_AVAILABLE);
         }
     }
 

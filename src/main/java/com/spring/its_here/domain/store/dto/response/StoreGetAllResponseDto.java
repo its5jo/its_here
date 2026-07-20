@@ -6,6 +6,7 @@ public record StoreGetAllResponseDto(
         UUID storeId,
         String name,
         String category,
+        Boolean categoryHasHidden,
         String address,
         String area,
         Double rating,

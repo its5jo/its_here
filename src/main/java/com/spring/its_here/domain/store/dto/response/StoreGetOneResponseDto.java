@@ -12,6 +12,7 @@ public record StoreGetOneResponseDto(
         String address,
         String area,
         String category,
+        Boolean categoryHasHidden,
         Double rating,
         Boolean hasOpen,
 
@@ -22,17 +23,14 @@ public record StoreGetOneResponseDto(
         LocalTime closedAt
 ) {
 
-        public static StoreGetOneResponseDto from(Store store, Area area, Category category) {
-
-                // (삭제됨) 처리
-                String areaName = area.isDeleted() ? area.getTown() + "(삭제됨)" : area.getTown();
-                String categoryName = category.isDeleted() ? category.getName() + "(삭제됨)" : category.getName();
+        public static StoreGetOneResponseDto from(Store store) {
 
                 return new StoreGetOneResponseDto(
                         store.getName(),
                         store.getAddress(),
-                        areaName,
-                        categoryName,
+                        store.getArea().getTown(),
+                        store.getCategory().getName(),
+                        store.getCategory().isHasHidden(),
                         store.calculateAverageRating(),
                         store.getHasOpen(),
                         store.getOpenAt(),

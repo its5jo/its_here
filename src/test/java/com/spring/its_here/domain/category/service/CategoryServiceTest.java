@@ -6,9 +6,11 @@ import static org.mockito.Mockito.*;
 
 import com.spring.its_here.domain.category.dto.request.CategoryCreateRequestDto;
 import com.spring.its_here.domain.category.dto.request.CategoryGetAllRequestDto;
+import com.spring.its_here.domain.category.dto.request.CategoryUpdateRequestDto;
 import com.spring.its_here.domain.category.dto.response.CategoryCreateResponseDto;
 import com.spring.its_here.domain.category.dto.response.CategoryGetAllResponseDto;
 import com.spring.its_here.domain.category.dto.response.CategoryGetOneResponseDto;
+import com.spring.its_here.domain.category.dto.response.CategoryUpdateResponseDto;
 import com.spring.its_here.domain.category.entity.Category;
 import com.spring.its_here.domain.category.repository.CategoryRepository;
 
@@ -47,7 +49,7 @@ class CategoryServiceTest {
     private CustomUserDetails userDetails;
 
     @Nested
-    @DisplayName("카테고리 생성 API 테스트")
+    @DisplayName("카테고리 생성")
     class CreateCategoryTest {
 
         @BeforeEach
@@ -66,7 +68,7 @@ class CategoryServiceTest {
 
         @Test
         @DisplayName("카테고리 생성 성공")
-        void createCategory_success() {
+        void success() {
 
             // given
             CategoryCreateRequestDto request =
@@ -271,6 +273,105 @@ class CategoryServiceTest {
             assertThat(responseDto.getTotalElements()).isEqualTo(1);
         }
 
+    }
+
+    @Nested
+    @DisplayName("카테고리 수정")
+    class UpdateCategory {
+
+        @Test
+        @DisplayName("성공")
+        void success() {
+
+            // given
+            UUID categoryId = UUID.randomUUID();
+
+            Category category =
+                    Category.createCategory("한식", false);
+
+            ReflectionTestUtils.setField(category, "id", categoryId);
+
+            CategoryUpdateRequestDto request =
+                    new CategoryUpdateRequestDto("양식", true);
+
+            when(categoryRepository.findByIdAndDeletedAtIsNull(categoryId))
+                    .thenReturn(Optional.of(category));
+
+            when(categoryRepository.existsByNameAndIdNotAndDeletedAtIsNull(request.name(), categoryId))
+                    .thenReturn(false);
+
+            // when
+            CategoryUpdateResponseDto response =
+                    categoryService.updateCategory(categoryId, request);
+
+            // then
+            assertThat(response.name()).isEqualTo("양식");
+            assertThat(response.hasHidden()).isTrue();
+
+            assertThat(category.getName()).isEqualTo("양식");
+            assertThat(category.isHasHidden()).isTrue();
+
+            verify(categoryRepository)
+                    .findByIdAndDeletedAtIsNull(categoryId);
+
+            verify(categoryRepository)
+                    .existsByNameAndIdNotAndDeletedAtIsNull(request.name(), categoryId);
+        }
+
+        @Test
+        @DisplayName("없거나 삭제된 카테고리")
+        void fail_not_found() {
+
+            // given
+            UUID categoryId = UUID.randomUUID();
+
+            CategoryUpdateRequestDto request =
+                    new CategoryUpdateRequestDto("양식", true);
+
+            when(categoryRepository.findByIdAndDeletedAtIsNull(categoryId))
+                    .thenReturn(Optional.empty());
+
+            // when & then
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> categoryService.updateCategory(categoryId, request)
+            );
+
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.CATEGORY_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("이미 존재하는 카테고리 이름")
+        void fail_duplicate_name() {
+
+            // given
+            UUID categoryId = UUID.randomUUID();
+
+            Category category =
+                    Category.createCategory("한식", false);
+
+            ReflectionTestUtils.setField(category, "id", categoryId);
+
+            CategoryUpdateRequestDto request =
+                    new CategoryUpdateRequestDto("양식", true);
+
+            when(categoryRepository.findByIdAndDeletedAtIsNull(categoryId))
+                    .thenReturn(Optional.of(category));
+
+            when(categoryRepository.existsByNameAndIdNotAndDeletedAtIsNull(
+                    request.name(), categoryId))
+                    .thenReturn(true);
+
+            // when & then
+            ItsHereException exception = assertThrows(
+                    ItsHereException.class,
+                    () -> categoryService.updateCategory(categoryId, request)
+            );
+
+            assertThat(exception.getErrorCode())
+                    .isEqualTo(ErrorCode.CATEGORY_NAME_DUPLICATE);
+        }
     }
 
 }
